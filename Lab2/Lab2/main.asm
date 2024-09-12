@@ -39,10 +39,13 @@ setup:
 	sts	TIMSK0,	r16
 
 	; Inicializo algunos registros que voy a usar como variables.
-	; Utilizaré r24 como contador genérico
+
+	; Utilizaré r24 como contador de segundos
 	ldi	r24, 0x00
 	; r17 como bandera para los LEDs
 	ldi r17, 0xFF
+	; r18 como contador para 30 segundos
+	ldi r18, 0x00	
 	sei
 
 start:
@@ -71,8 +74,20 @@ _tmr0_int:
 	breq _tmr0_eq
 	rjmp _tmr0_exit
 
+; reloj de 1Hz
+; al final de la subrutina el puntero de la pila debe permanecer igual
 _tmr0_eq:
 	eor r24, r24
+
+	inc r18
+	cpi r18, 29 ; 30-1
+	brne _tmr0_toggle
+	ldi r18, 0b00100000
+	eor r17, r18
+	eor r18, r18
+	rjmp _tmr0_toggle
+
+_tmr0_toggle:
 	push r18
 	ldi r18, 0b00000100
 	eor r17, r18
