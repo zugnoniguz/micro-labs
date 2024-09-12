@@ -12,6 +12,7 @@ setup:
 	; Los 4 LEDs son salidas
 	out	DDRB, r16		
 	; apago los LEDs
+	ldi r16, 0xFF
 	out PORTB, r16
 
 	; PC{2,3,4} - son los botones del shield
@@ -40,8 +41,8 @@ setup:
 	; Inicializo algunos registros que voy a usar como variables.
 	; Utilizaré r24 como contador genérico
 	ldi	r24, 0x00
-	; r17 como bandera para el led
-	ldi r17, 0x00
+	; r17 como bandera para los LEDs
+	ldi r17, 0xFF
 	sei
 
 start:
@@ -70,8 +71,8 @@ _tmr0_int:
 	in r16, SREG
 	push r16
 
-	ldi r16, 124
 	inc r24
+	ldi r16, 124
 	cp r24, r16
 
 	breq _tmr0_eq
@@ -80,7 +81,7 @@ _tmr0_int:
 _tmr0_eq:
 	eor r24, r24
 	push r18
-	ldi r18, 0b00011110
+	ldi r18, 0b00000100
 	eor r17, r18
 	out PORTB, r17
 	pop r18
