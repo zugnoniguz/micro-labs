@@ -66,8 +66,7 @@ _tmr0_int:
 	push r16
 
 	inc r24
-	ldi r16, 124
-	cp r24, r16
+	cpi r24, 124
 
 	breq _tmr0_eq
 	rjmp _tmr0_exit
