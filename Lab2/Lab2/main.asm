@@ -1,6 +1,6 @@
 ; Empiezo con los vectores de interrupción
 .org 0x0000
-jmp	start ; dirección de comienzo (vector de reset)  
+jmp	setup ; dirección de comienzo (vector de reset)
 
 .org 0x001C 
 jmp	_tmr0_int ; salto atención a rutina de comparación A del timer 0
@@ -73,18 +73,27 @@ end:
 
 _tmr0_int:
 	push r16
-	ldi r16, 0x1D
+	in r16, SREG
+	push r16
+
+	ldi r16, 124
 	inc r24
 	cp r24, r16
-	pop r16
+
 	breq _tmr0_eq
-	reti
+	rjmp _tmr0_exit
 
 _tmr0_eq:
 	eor r24, r24
 	push r18
-	ldi r18, 0b00000010
+	ldi r18, 0b00011110
 	eor r17, r18
 	out PORTB, r17
 	pop r18
+	rjmp _tmr0_exit
+
+_tmr0_exit:
+	pop r16
+	out SREG, r16
+	pop r16
 	reti
