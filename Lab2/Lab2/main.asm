@@ -55,12 +55,6 @@ loop1:
 	nop
 	nop
 	brne loop1
-loop2:
-	nop
-	nop
-	nop
-end:
-	rjmp loop2
 
 ; Rutinas de interrupción
 
