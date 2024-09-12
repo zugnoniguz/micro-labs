@@ -53,12 +53,10 @@ setup:
 
 	; r24 como contador de segundos
 	ldi r24, 0x00
+	; r17 como bandera para los LEDs
+	ldi r17, 0xFF
 	; r18 como contador para 30 segundos
 	ldi r18, 0x00
-	; r17 como bandera para los LEDs
-	ldi r17, 0x00
-	; r19 si esta parado
-	ldi r19, 0x00
 	sei
 
 start:
@@ -75,34 +73,8 @@ _pcint1_int:
 	in r16, SREG
 	push r16
 
-	ldi r16, 0b00000000
-	sts TIMSK0, r16
-
-	in r16, PINC
-	cpi r16, 0x4C
-	breq _pcint1_btn1
-	cpi r16, 0x4A
-	breq _pcint1_btn2
-	cpi r16, 0x46
-	breq _pcint1_btn3
-
-	rjmp _pcint1_exit
-
-_pcint1_btn1:
-	ldi r19, 0
-	rjmp _pcint1_exit
-
-_pcint1_btn2:
-	ldi r19, 1
-	rjmp _pcint1_exit
-
-_pcint1_btn3:
-	ldi r19, 2
-	rjmp _pcint1_exit
-
-_pcint1_exit:
-	ldi r16, 0b00000010
-	sts TIMSK0, r16
+	ldi r16, 0b00001100
+	eor r17, r16
 
 	pop r16
 	out SREG, r16
@@ -132,35 +104,19 @@ _tmr0_int:
 ; al final de la subrutina el puntero de la pila debe permanecer igual
 _tmr0_eq:
 	eor r24, r24
-
-	cpi r19, 0
-	breq _tmr0_inc
-	cpi r19, 1
-	breq _tmr0_exit
-	cpi r19, 2
-	breq _tmr0_resetbtn
-
-_tmr0_resetbtn:
-	ldi r18, 0x00
-	ldi r17, 0xFF
-	ldi r19, 0x00
-	rjmp _tmr0_exit
-
-_tmr0_inc:
 	inc r18
-	cpi r18, 16
-	breq _tmr0_reset
-	mov r17, r18
-	lsl r17
-	lsl r17
-	ldi r24, 0xFF
-	eor r17, r24
-	eor r24, r24
-	rjmp _tmr0_exit
-
-_tmr0_reset:
+	cpi r18, 29 ; 30-1
+	brne _tmr0_toggle
+	ldi r18, 0b00010000
+	eor r17, r18
 	eor r18, r18
-	ldi r17, 0xFF
+	rjmp _tmr0_toggle
+
+_tmr0_toggle:
+	push r18
+	ldi r18, 0b00100000
+	eor r17, r18
+	pop r18
 	rjmp _tmr0_exit
 
 _tmr0_exit:
