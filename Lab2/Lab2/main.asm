@@ -49,13 +49,7 @@ start:
 loop1:
 	nop
 	nop
-	nop
-	nop
-	ori r16, 0xFF
-	nop
-	nop
-	nop
-	brne loop1
+	rjmp loop1
 
 ; Rutinas de interrupción
 
