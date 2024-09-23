@@ -36,7 +36,7 @@ setup:
 	; Apago todo el 7seg
 	ldi r16,0b11111111
 	ldi r17,0b11110000
-	call bin7seg
+	call to_7seg
 	
 
 
@@ -52,89 +52,28 @@ setup:
 main:
 	ldi r17, 0b1000_0000
 	
-	ldi r16, 9
-	call dec7seg
+	ldi r16, 0b01000001
+	call to_7seg
 	lsr r17
 	
-	ldi r16, 0
-	call dec7seg
+	ldi r16, 0b00011001
+	call to_7seg
 	lsr r17
 
-	ldi r16, 7
-	call dec7seg
+	ldi r16, 0b01000001
+	call to_7seg
 	lsr r17
 
-	ldi r16, 8
-	call dec7seg
+	ldi r16, 0b00011001
+	call to_7seg
 
 	rjmp main
 
 
-
-dec7seg:
-	push r19
-	in r19, SREG
-	push r19
-	push r20
-
-	mov r19, r16
-
-	ldi r16, 0b00011001
-	cpi r19, 9	
-	breq dec7seg_h
-	
-	ldi r16, 0b00000001
-	cpi r19, 8
-	breq dec7seg_h
-
-	ldi r16, 0b00011111
-	cpi r19, 7
-	breq dec7seg_h
-
-	ldi r16, 0b01000001
-	cpi r19, 6
-	breq dec7seg_h
-
-	ldi r16, 0b01001001
-	cpi r19, 5
-	breq dec7seg_h
-
-	ldi r16, 0b10011001
-	cpi r19, 4
-	breq dec7seg_h
-
-	ldi r16, 0b00001101
-	cpi r19, 3
-	breq dec7seg_h
-	
-	ldi r16, 0b00100101
-	cpi r19, 2
-	breq dec7seg_h
-
-	ldi r16, 0b10011111
-	cpi r19, 1
-	breq dec7seg_h
-	
-	ldi r16, 0b00000011
-	cpi r19, 0
-	breq dec7seg_h
-
-	ret
-	
-dec7seg_h:
-	call bin7seg
-	
-	pop r20
-	pop r19
-	out SREG, r19
-	pop r19
-
-	ret
-
 ; La rutina to_7seg envía r16 y r17 al display de 7 segmentos
 ; r16 - es el estado de un digito.
 ; r17 - contiene el estado de un digito en sus primeros 4 bits.
-bin7seg:
+to_7seg:
 	push r19
 	in r19, SREG
 	push r19
@@ -142,7 +81,6 @@ bin7seg:
 	call send_data
 	mov r16, r17
 	call send_data
-
 	; Toggle LCHCLK
 	sbi PORTD, 4
 	cbi	PORTD, 4 
