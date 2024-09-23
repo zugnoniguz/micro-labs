@@ -1,4 +1,3 @@
-;
 ; Lab3
 ; Created: 9/23/2024 7:53:38 AM
 ; Author : Guzman Zugnoni
@@ -6,11 +5,12 @@
 .org 0x00
 jmp setup
 
-.org 0x001C
 ; salto a la subrutina de comparacion del timer0
+.org 0x001C
 jmp _tmr0_int
 
 setup:
+	cli
 	; configuro los puertos:
 	; PB2 PB3 PB4 PB5	- son los LEDs del shield
 	; PB0 es SD (serial data) para el display 7seg
@@ -53,8 +53,9 @@ setup:
 	; habilito la interrupción del timer (falta global)
 	ldi r16, 0b00000010
 	sts TIMSK0, r16
+
+	; contador hasta 125 para ajustar el reloj a 1Hz
 	eor r24, r24
-	eor r25, r25
 
 	; Apago todo el 7seg
 	ldi r16,0b11111111
@@ -62,13 +63,13 @@ setup:
 	call bin7seg
 
 	; segundos1
-	ldi r20, 0x00
+	eor r20, r20
 	; segundos2
-	ldi r21, 0x00
+	eor r21, r21
 	; minutos1
-	ldi r22, 0x00
+	eor r22, r22
 	; minutos2
-	ldi r23, 0x00
+	eor r23, r23
 
 	sei
 
@@ -103,55 +104,20 @@ main:
 	rjmp main
 
 dec7segdot:
-	push r19
-	in r19, SREG
-	push r19
+	call dec7segval
+	ori r16, 0x01
 
-	mov r19, r16
+	; dependemos de este ret
+	rjmp bin7seg
 
-	ldi r16, 0b00011000
-	cpi r19, 9
-	breq dec7seg_h
-
-	ldi r16, 0b00000000
-	cpi r19, 8
-	breq dec7seg_h
-
-	ldi r16, 0b00011110
-	cpi r19, 7
-	breq dec7seg_h
-
-	ldi r16, 0b01000000
-	cpi r19, 6
-	breq dec7seg_h
-
-	ldi r16, 0b01001000
-	cpi r19, 5
-	breq dec7seg_h
-
-	ldi r16, 0b10011000
-	cpi r19, 4
-	breq dec7seg_h
-
-	ldi r16, 0b00001100
-	cpi r19, 3
-	breq dec7seg_h
-
-	ldi r16, 0b00100100
-	cpi r19, 2
-	breq dec7seg_h
-
-	ldi r16, 0b10011110
-	cpi r19, 1
-	breq dec7seg_h
-
-	ldi r16, 0b00000010
-	cpi r19, 0
-	breq dec7seg_h
-
-	ret
 
 dec7seg:
+	call dec7segval
+
+	; dependemos de este ret
+	rjmp bin7seg
+
+dec7segval:
 	push r19
 	in r19, SREG
 	push r19
@@ -160,49 +126,47 @@ dec7seg:
 
 	ldi r16, 0b00011001
 	cpi r19, 9
-	breq dec7seg_h
+	breq dec7segval_exit
 
 	ldi r16, 0b00000001
 	cpi r19, 8
-	breq dec7seg_h
+	breq dec7segval_exit
 
 	ldi r16, 0b00011111
 	cpi r19, 7
-	breq dec7seg_h
+	breq dec7segval_exit
 
 	ldi r16, 0b01000001
 	cpi r19, 6
-	breq dec7seg_h
+	breq dec7segval_exit
 
 	ldi r16, 0b01001001
 	cpi r19, 5
-	breq dec7seg_h
+	breq dec7segval_exit
 
 	ldi r16, 0b10011001
 	cpi r19, 4
-	breq dec7seg_h
+	breq dec7segval_exit
 
 	ldi r16, 0b00001101
 	cpi r19, 3
-	breq dec7seg_h
+	breq dec7segval_exit
 
 	ldi r16, 0b00100101
 	cpi r19, 2
-	breq dec7seg_h
+	breq dec7segval_exit
 
 	ldi r16, 0b10011111
 	cpi r19, 1
-	breq dec7seg_h
+	breq dec7segval_exit
 
 	ldi r16, 0b00000011
 	cpi r19, 0
-	breq dec7seg_h
+	breq dec7segval_exit
 
 	ret
 
-dec7seg_h:
-	call bin7seg
-
+dec7segval_exit
 	pop r19
 	out SREG, r19
 	pop r19
@@ -268,12 +232,6 @@ _tmr0_int:
 	breq _tmr0_eq
 	rjmp _tmr0_exit
 
-_tmr0_exit:
-	pop r16
-	out SREG, r16
-	pop r16
-	reti
-
 ; reloj de 1Hz
 ; al final de la subrutina el puntero de la pila debe permanecer igual
 _tmr0_eq:
@@ -285,36 +243,18 @@ _tmr0_eq:
 
 	call inc_timer
 
-	clc
-	lsl r25
-	inc r25
-
-	sbrc r25, 4
-	call _tmr0_reset
-
 	pop r19
 	out SREG, r19
 	pop r19
 
 	rjmp _tmr0_exit
 
-_tmr0_reset:
-	eor r25, r25
-	clc
-	ldi r16, 0xFF
-	ldi r17, 0b10000000
-	call bin7seg
-	ldi r16, 0xFF
-	lsr r17
-	call bin7seg
-	ldi r16, 0xFF
-	lsr r17
-	call bin7seg
-	ldi r16, 0xFF
-	lsr r17
-	call bin7seg
+_tmr0_exit:
+	pop r16
+	out SREG, r16
+	pop r16
+	reti
 
-	ret
 
 inc_timer:
 	inc r20
