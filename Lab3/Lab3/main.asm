@@ -5,6 +5,10 @@
 .org 0x00
 jmp setup
 
+; salto a la subrutina de botón presionado
+.org 0x0008
+jmp _pcint1_int
+
 ; salto a la subrutina de comparacion del timer0
 .org 0x001C
 jmp _tmr0_int
@@ -54,6 +58,14 @@ setup:
 	ldi r16, 0b00000010
 	sts TIMSK0, r16
 
+	; habilito la interrupción del pin change (sigue faltando global)
+	ldi r16, 0b00000010
+	sts PCICR, r16
+
+	; habilito que la interrupción ocurra en los pines de botones
+	ldi r16, 0b00001110
+	sts PCMSK1, r16
+
 	; contador hasta 125 para ajustar el reloj a 1Hz
 	eor r24, r24
 
@@ -71,6 +83,11 @@ setup:
 	; minutos2
 	eor r23, r23
 
+	; 0 = Continue
+	; 1 = Pause
+	; 2 = Reset
+	eor r19, r19
+
 	sei
 
 
@@ -85,6 +102,12 @@ setup:
 
 
 main:
+	cpi r19, 1
+	breq main
+
+	cpi r19, 2
+	breq led_reset
+
 	mov r16, r23
 	ldi r17, 0b10000000
 	call dec7seg
@@ -100,6 +123,14 @@ main:
 	mov r16, r20
 	ldi r17, 0b00010000
 	call dec7seg
+
+	rjmp main
+
+led_reset:
+	eor r20, r20
+	eor r21, r21
+	eor r22, r22
+	eor r23, r23
 
 	rjmp main
 
@@ -198,7 +229,7 @@ bin7seg:
 ; Esta subrutina manda un byte a los decodificadores del 7seg
 send_data:
 	; contador para 8 bits
-	ldi		r18, 0x08
+	ldi	r18, 0x08
 
 loop:
 	; SFTCLK = 0
@@ -288,3 +319,48 @@ m1_overflow:
 
 	eor r23, r23
 	ret
+
+_pcint1_int:
+	push r16
+	in r16, SREG
+	push r16
+
+	; Disable TMR0 interrupts
+	ldi r16, 0b00000000
+	sts TIMSK0, r16
+
+	in r16, PINC
+	cpi r16, 0x4C
+	breq _pcint1_btn0
+	cpi r16, 0x4A
+	breq _pcint1_btn1
+	cpi r16, 0x46
+	breq _pcint1_btn2
+
+	rjmp _pcint1_exit
+
+_pcint1_btn0:
+	; Continue
+	ldi r18, 0
+	rjmp _pcint1_exit
+
+_pcint1_btn1:
+	; Pause
+	ldi r18, 1
+	rjmp _pcint1_exit
+
+_pcint1_btn2:
+	; Reset
+	ldi r18, 2
+	rjmp _pcint1_exit
+
+_pcint1_exit:
+	pop r16
+	out SREG, r16
+	pop r16
+
+	; Re-enable TMR0 interrupts
+	ldi r16, 0b00000010
+	sts TIMSK0, r16
+
+	reti
