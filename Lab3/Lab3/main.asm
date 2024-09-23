@@ -91,7 +91,7 @@ main:
 
 	mov r16, r22
 	ldi r17, 0b01000000
-	call dec7seg
+	call dec7segdot
 
 	mov r16, r21
 	ldi r17, 0b00100000
@@ -103,6 +103,54 @@ main:
 
 	rjmp main
 
+dec7segdot:
+	push r19
+	in r19, SREG
+	push r19
+
+	mov r19, r16
+
+	ldi r16, 0b00011000
+	cpi r19, 9	
+	breq dec7seg_h
+	
+	ldi r16, 0b00000000
+	cpi r19, 8
+	breq dec7seg_h
+
+	ldi r16, 0b00011110
+	cpi r19, 7
+	breq dec7seg_h
+
+	ldi r16, 0b01000000
+	cpi r19, 6
+	breq dec7seg_h
+
+	ldi r16, 0b01001000
+	cpi r19, 5
+	breq dec7seg_h
+
+	ldi r16, 0b10011000
+	cpi r19, 4
+	breq dec7seg_h
+
+	ldi r16, 0b00001100
+	cpi r19, 3
+	breq dec7seg_h
+	
+	ldi r16, 0b00100100
+	cpi r19, 2
+	breq dec7seg_h
+
+	ldi r16, 0b10011110
+	cpi r19, 1
+	breq dec7seg_h
+	
+	ldi r16, 0b00000010
+	cpi r19, 0
+	breq dec7seg_h
+
+	ret
 
 dec7seg:
 	push r19
