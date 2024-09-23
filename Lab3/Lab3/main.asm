@@ -86,7 +86,7 @@ setup:
 	; 0 = Continue
 	; 1 = Pause
 	; 2 = Reset
-	eor r19, r19
+	eor r25, r25
 
 	sei
 
@@ -102,10 +102,7 @@ setup:
 
 
 main:
-	cpi r19, 1
-	breq main
-
-	cpi r19, 2
+	cpi r25, 2
 	breq led_reset
 
 	mov r16, r23
@@ -131,12 +128,13 @@ led_reset:
 	eor r21, r21
 	eor r22, r22
 	eor r23, r23
+	eor r25, r25
 
 	rjmp main
 
 dec7segdot:
 	call dec7segval
-	ori r16, 0x01
+	cbr r16, 1
 
 	; dependemos de este ret
 	rjmp bin7seg
@@ -197,7 +195,7 @@ dec7segval:
 
 	ret
 
-dec7segval_exit
+dec7segval_exit:
 	pop r19
 	out SREG, r19
 	pop r19
@@ -266,17 +264,10 @@ _tmr0_int:
 ; reloj de 1Hz
 ; al final de la subrutina el puntero de la pila debe permanecer igual
 _tmr0_eq:
-	push r19
-	in r19, SREG
-	push r19
-
 	eor r24, r24
 
-	call inc_timer
-
-	pop r19
-	out SREG, r19
-	pop r19
+	cpi r25, 0
+	breq inc_timer
 
 	rjmp _tmr0_exit
 
@@ -292,7 +283,7 @@ inc_timer:
 	cpi r20, 10
 	breq s1_overflow
 
-	ret
+	rjmp _tmr0_exit
 
 s1_overflow:
 	eor r20, r20
@@ -300,7 +291,7 @@ s1_overflow:
 	cpi r21, 6
 	breq s2_overflow
 
-	ret
+	rjmp _tmr0_exit
 
 s2_overflow:
 	eor r21, r21
@@ -308,17 +299,17 @@ s2_overflow:
 	cpi r22, 10
 	breq m1_overflow
 
-	ret
+	rjmp _tmr0_exit
 
 m1_overflow:
 	eor r22, r22
 	inc r23
 	ldi r16, 6
 	cpse r23, r16
-	ret
+	rjmp _tmr0_exit
 
 	eor r23, r23
-	ret
+	rjmp _tmr0_exit
 
 _pcint1_int:
 	push r16
@@ -341,17 +332,17 @@ _pcint1_int:
 
 _pcint1_btn0:
 	; Continue
-	ldi r18, 0
+	ldi r25, 0
 	rjmp _pcint1_exit
 
 _pcint1_btn1:
 	; Pause
-	ldi r18, 1
+	ldi r25, 1
 	rjmp _pcint1_exit
 
 _pcint1_btn2:
 	; Reset
-	ldi r18, 2
+	ldi r25, 2
 	rjmp _pcint1_exit
 
 _pcint1_exit:
