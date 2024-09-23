@@ -11,17 +11,17 @@ setup:
 	; PB2 PB3 PB4 PB5	- son los LEDs del shield
 	; PB0 es SD (serial data) para el display 7seg
 	; PD7 es SCLK, el reloj de los shift registers del display 7seg
-	; PD4 es LCH, transfiere los datos que ya ingresaron en serie, a la salida del registro paralelo 
+	; PD4 es LCH, transfiere los datos que ya ingresaron en serie, a la salida del registro paralelo
 	; PC son entradas para los botones
-    
 
-	ldi r16, 0b00111101	
+
+	ldi r16, 0b00111101
 	; 4 LEDs del shield son salidas
 	out	DDRB, r16
 	; Los LEDs empiezan apagados
 	out	PORTB, r16
-	
-	ldi	r16, 0b00000000	
+
+	ldi	r16, 0b00000000
 	; 3 botones del shield son entradas
 	out	DDRC, r16
 
@@ -37,25 +37,25 @@ setup:
 	ldi r16,0b11111111
 	ldi r17,0b11110000
 	call bin7seg
-	
+
 
 
 ;-------------------------------------------------------------------------------------
-; Observar la rutina sacanum, utiliza r16 para los LEDs del numero que quiero mostar, r17 para indicar dÛnde lo quiero mostrar
-; En main: cargo en r16 los leds a encender para formar el '0', y en r17 indico es el primero de los 4 dÌgitos. 
-; Luego se llama la rutina de sacar la iformaciÛn serial.
+; Observar la rutina sacanum, utiliza r16 para los LEDs del numero que quiero mostar, r17 para indicar d√≥nde lo quiero mostrar
+; En main: cargo en r16 los leds a encender para formar el '0', y en r17 indico es el primero de los 4 d√≠gitos.
+; Luego se llama la rutina de sacar la iformaci√≥n serial.
 ;
 ; En el ejemplo para ver el numero 0, r16 debe ser 0b00000011 (orden de segmentos es abcdefgh, h es el punto)
-; y r17 debe ser 0b00010000 (dÌgito display de m·s a la derecha)
+; y r17 debe ser 0b00010000 (d√≠gito display de m√°s a la derecha)
 
 
 main:
 	ldi r17, 0b1000_0000
-	
+
 	ldi r16, 9
 	call dec7seg
 	lsr r17
-	
+
 	ldi r16, 0
 	call dec7seg
 	lsr r17
@@ -80,9 +80,9 @@ dec7seg:
 	mov r19, r16
 
 	ldi r16, 0b00011001
-	cpi r19, 9	
+	cpi r19, 9
 	breq dec7seg_h
-	
+
 	ldi r16, 0b00000001
 	cpi r19, 8
 	breq dec7seg_h
@@ -106,7 +106,7 @@ dec7seg:
 	ldi r16, 0b00001101
 	cpi r19, 3
 	breq dec7seg_h
-	
+
 	ldi r16, 0b00100101
 	cpi r19, 2
 	breq dec7seg_h
@@ -114,16 +114,16 @@ dec7seg:
 	ldi r16, 0b10011111
 	cpi r19, 1
 	breq dec7seg_h
-	
+
 	ldi r16, 0b00000011
 	cpi r19, 0
 	breq dec7seg_h
 
 	ret
-	
+
 dec7seg_h:
 	call bin7seg
-	
+
 	pop r20
 	pop r19
 	out SREG, r19
@@ -131,22 +131,22 @@ dec7seg_h:
 
 	ret
 
-; La rutina to_7seg envÌa r16 y r17 al display de 7 segmentos
+; La rutina to_7seg env√≠a r16 y r17 al display de 7 segmentos
 ; r16 - es el estado de un digito.
 ; r17 - contiene el estado de un digito en sus primeros 4 bits.
 bin7seg:
 	push r19
 	in r19, SREG
 	push r19
-	 
+
 	call send_data
 	mov r16, r17
 	call send_data
 
 	; Toggle LCHCLK
 	sbi PORTD, 4
-	cbi	PORTD, 4 
-	
+	cbi	PORTD, 4
+
 	pop r19
 	out SREG, r19
 	pop r19
@@ -177,4 +177,3 @@ loop_exit:
 	; cuando r18 llega a 0 me voy
 	brne loop
 	ret
-  
