@@ -62,7 +62,14 @@ setup:
 	ldi r17,0b11110000
 	call bin7seg
 
-	ldi r26, 0xFF
+	; segundos1
+	ldi r20, 0x00
+	; segundos2
+	ldi r21, 0x00
+	; minutos1
+	ldi r22, 0x00
+	; minutos2
+	ldi r23, 0x00
 
 	sei
 	
@@ -78,50 +85,29 @@ setup:
 
 
 main:
-	sbrc r25, 0
-	call digit0
-	sbrc r25, 1
-	call digit1
-	sbrc r25, 2
-	call digit2
-	sbrc r25, 3
-	call digit3
-
-	out PORTB, r26
-
-	rjmp main
-
-digit0:
-	ldi r16, 1
+	mov r16, r23
 	ldi r17, 0b10000000
 	call dec7seg
-	ret
-	
-digit1:
-	ldi r16, 2
+
+	mov r16, r22
 	ldi r17, 0b01000000
 	call dec7seg
-	ret
-	
-digit2:
-	ldi r16, 3
+
+	mov r16, r21
 	ldi r17, 0b00100000
 	call dec7seg
-	ret
-	
-digit3:
-	ldi r16, 4
+
+	mov r16, r20
 	ldi r17, 0b00010000
 	call dec7seg
-	ret
 
+	rjmp main
 
 
 dec7seg:
 	push r19
 	in r19, SREG
 	push r19
-	push r20
 
 	mov r19, r16
 
@@ -170,7 +156,6 @@ dec7seg:
 dec7seg_h:
 	call bin7seg
 	
-	pop r20
 	pop r19
 	out SREG, r19
 	pop r19
@@ -230,6 +215,7 @@ _tmr0_int:
 	push r16
 
 	inc r24
+	; frq_tmr / 125 = 1Hz
 	cpi r24, 124
 
 	breq _tmr0_eq
@@ -250,9 +236,8 @@ _tmr0_eq:
 
 	eor r24, r24
 
-	ldi r16, 0b00000100
-	eor r26, r16
-
+	call inc_timer
+		
 	clc
 	lsl r25	
 	inc r25
@@ -282,4 +267,37 @@ _tmr0_reset:
 	lsr r17
 	call bin7seg
 
+	ret
+
+inc_timer:
+	inc r20
+	cpi r20, 10
+	breq s1_overflow
+	
+	ret
+
+s1_overflow:
+	eor r20, r20
+	inc r21
+	cpi r21, 6
+	breq s2_overflow
+	
+	ret
+
+s2_overflow:
+	eor r21, r21
+	inc r22
+	cpi r22, 10
+	breq m1_overflow
+
+	ret
+
+m1_overflow:
+	eor r22, r22
+	inc r23
+	ldi r16, 6
+	cpse r23, r16
+	ret
+
+	eor r23, r23
 	ret
