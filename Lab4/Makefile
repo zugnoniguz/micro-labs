@@ -11,7 +11,7 @@ upload: build
 	avrdude -c xplainedmini -p m328p -U flash:w:$(BUILDDIR)main.hex:i
 
 $(BUILDDIR)main.o: main.c
-	avr-gcc $^ -mmcu=atmega328p -Wall -Werror -O3 -o $@
+	avr-gcc $^ -mmcu=atmega328p -Wall -Werror -Os -o $@
 
 $(BUILDDIR)main.hex: $(BUILDDIR)main.o
 	avr-objcopy -O ihex $< $@
