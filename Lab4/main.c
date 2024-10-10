@@ -97,33 +97,35 @@ void setup() {
 	cli();
 
 	// 4 LEDs del shield son salidas, y 0 es SDI del 7seg
-	DDRB = 0b00111101;
+	DDRB = BIT_MASK(DDB5) | BIT_MASK(DDB4) | BIT_MASK(DDB3) | BIT_MASK(DDB2) | BIT_MASK(DDB0);
 	// Empiezan apagados
-	PORTB = 0b00111101;
+	PORTB = BIT_MASK(PORTB5) | BIT_MASK(PORTB4) | BIT_MASK(PORTB3) | BIT_MASK(PORTB2);
 
 	// 3 botones del shield son entradas
-	DDRC = 0b00000000;
+	DDRC = (0 << DDC1) | (0 << DDC2) | (0 << DDC3);
 
 	// PD4 (LCHCLK) y PD7 (SCLK) son salidas
-	DDRD = 0b10010000;
+	DDRD = BIT_MASK(PORTD7) | BIT_MASK(PORTD4);
 	// SCLK empieza en 0
-	CLEAR_BIT(PORTD, 7);
+	CLEAR_BIT(PORTD, PORTD7);
 	// LCHCLK empieza en 0
-	CLEAR_BIT(PORTD, 4);
+	CLEAR_BIT(PORTD, PORTD4);
 
 	// TMR0 cuenta hasta OCR0A y luego reinicia su valor (CTC (Clear Timer on
 	// Compare))
-	TCCR0A = 0b00000010;
+	TCCR0A = BIT_MASK(WGM01);
 	// prescaler = 1024 y termino de configurar CTC
-	TCCR0B = 0b00000101;
+	TCCR0B = BIT_MASK(CS02) | BIT_MASK(CS00);
 	OCR0A = 124;
 	// Habilita recepción de interrupciones del timer0
-	TIMSK0 = 0b00000010;
+	// Output Compare Interrupt Enable 0 A
+	TIMSK0 = BIT_MASK(OCIE0A);
 
 	// Habilita recepción de interrupciones de pin change de 8..14
-	PCICR = 0b00000010;
+	// Pin Change Interrupt Control Register
+	PCICR = BIT_MASK(PCIE1);
 	// Habilita recepción de interrupciones de pin change de 9,10,11
-	PCMSK1 = 0b00001110;
+	PCMSK1 = BIT_MASK(PCINT9) | BIT_MASK(PCINT10) | BIT_MASK(PCINT11);
 
 	timer_counter = 0;
 	secs1 = 0;
@@ -166,7 +168,7 @@ ISR(TIMER0_COMPA_vect) {
 
 ISR(PCINT1_vect) {
 	byte tmp = TIMSK0;
-	TIMSK0 = 0b00000000;
+	CLEAR_BIT(TIMSK0, OCIE0A);
 	switch(PINC) {
 		case 0x4C:
 			timer_state = 0;
