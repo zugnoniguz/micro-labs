@@ -57,27 +57,38 @@ void bin_to_7seg(byte segments, byte digit) {
 byte dec_to_7segval(byte val) {
 	switch(val) {
 		case 9:
-			return 0b00011001;
+			// 0b00011001
+			return 0x19;
 		case 8:
-			return 0b00000001;
+			// 0b00000001
+			return 0x01;
 		case 7:
-			return 0b00011111;
+			// 0b00011111
+			return 0x1F;
 		case 6:
-			return 0b01000001;
+			// 0b01000001
+			return 0x41;
 		case 5:
-			return 0b01001001;
+			// 0b01001001
+			return 0x49;
 		case 4:
-			return 0b10011001;
+			// 0b10011001
+			return 0x99;
 		case 3:
-			return 0b00001101;
+			// 0b00001101
+			return 0x0D;
 		case 2:
-			return 0b00100101;
+			// 0b00100101
+			return 0x25;
 		case 1:
-			return 0b10011111;
+			// 0b10011111
+			return 0x9F;
 		case 0:
-			return 0b00000011;
+			// 0b00000011
+			return 0x03;
 		default:
-			return 0b11111101;
+			// 0b11111101
+			return 0xFD;
 	}
 }
 
