@@ -6,19 +6,21 @@
 #include <stdbool.h>
 #include <util/delay.h>
 
-typedef uint8_t u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
-typedef uint64_t u64;
-typedef int8_t i8;
-typedef int16_t i16;
-typedef int32_t i32;
-typedef int64_t i64;
-typedef u8 byte;
+typedef unsigned char byte;
 
 #define BIT_MASK(bit) (1 << (bit))
 #define SET_BIT(val, bit) (val |= BIT_MASK(bit))
 #define CLEAR_BIT(val, bit) (val &= ~(BIT_MASK(bit)))
+
+volatile byte *registers = 0x00;
+
+int timer_counter = 0;
+int timer_state = 0;
+int secs1 = 0;
+int secs2 = 0;
+int mins1 = 0;
+int mins2 = 0;
+
 
 void send_data_to_7seg(byte binary) {
 	for (int i = 0; i < 8; ++i) {
@@ -114,49 +116,93 @@ void setup() {
 	TCCR0A = BIT_MASK(WGM01);
 	// prescaler = 1024 y termino de configurar CTC
 	TCCR0B = BIT_MASK(CS02) | BIT_MASK(CS00);
-	OCR0A = 156;
+	OCR0A = 124;
 	// Habilita recepción de interrupciones del timer0
 	// Output Compare Interrupt Enable 0 A
 	TIMSK0 = BIT_MASK(OCIE0A);
 
-	ADMUX = BIT_MASK(REFS0) | BIT_MASK(MUX0);
-	ADCSRA = BIT_MASK(ADEN) | BIT_MASK(ADSC) | BIT_MASK(ADATE) | BIT_MASK(ADIE);
-	ADCSRB = BIT_MASK(ADTS1) | BIT_MASK(ADTS0);
+	// Habilita recepción de interrupciones de pin change de 8..14
+	// Pin Change Interrupt Control Register
+	PCICR = BIT_MASK(PCIE1);
+	// Habilita recepción de interrupciones de pin change de 9,10,11
+	PCMSK1 = BIT_MASK(PCINT9) | BIT_MASK(PCINT10) | BIT_MASK(PCINT11);
+
+	timer_counter = 0;
+	secs1 = 0;
+	secs2 = 0;
+	mins1 = 0;
+	mins2 = 0;
+	timer_state = 0;
 
 	// Habilita interrupciones globales
 	sei();
 }
 
-u32 accumulator = 0;
-u16 average = 0;
-u16 samples = 0;
+void increment_timer() {
+	if (++secs1 != 10) {
+		return;
+	}
+	secs1 = 0;
+	if (++secs2 != 6) {
+		return;
+	}
+	secs2 = 0;
+	if (++mins1 != 10) {
+		return;
+	}
+	mins1 = 0;
+	if (++mins2 != 6) {
+		return;
+	}
+	mins2 = 0;
+}
 
-ISR(ADC_vect) {
-	uint16_t duty = ADC;
-	OCR1B = duty;
-
-	accumulator += duty;
-	samples++;
-	if (samples == 100) {
-		average = accumulator / 100;
-		accumulator = 0;
-		samples = 0;
+ISR(TIMER0_COMPA_vect) {
+	if (++timer_counter == 124) {
+		timer_counter = 0;
+		if (timer_state == 0) {
+			increment_timer();
+		}
 	}
 }
 
-void show_4digit(u16 val) {
-	dec_to_7seg(val % 10, 3);
-	dec_to_7seg((val / 10) % 10,  2);
-	dec_to_7seg((val / 100) % 10,  1);
-	dec_to_7seg((val / 1000) % 10,  0);
+ISR(PCINT1_vect) {
+	byte tmp = TIMSK0;
+	CLEAR_BIT(TIMSK0, OCIE0A);
+	switch(PINC) {
+		case 0x4C:
+			timer_state = 0;
+			break;
+		case 0x4A:
+			timer_state = 1;
+			break;
+		case 0x46:
+			timer_state = 0;
+			mins2 = 0;
+			mins1 = 0;
+			secs2 = 0;
+			secs1 = 0;
+			break;
+		default:
+			break;
+	}
+	TIMSK0 = tmp;
 }
 
-void show_samples() {
-	show_4digit(samples);
+void show_timer() {
+	dec_to_7seg(mins2, 0);
+	dec_to_7seg_dot(mins1, 1);
+	dec_to_7seg(secs2, 2);
+	dec_to_7seg(secs1, 3);
 }
 
 void loop() {
-	show_samples();
+	if (timer_state == 1) {
+		CLEAR_BIT(PORTB, 2);
+	} else {
+		SET_BIT(PORTB, 2);
+	}
+	show_timer();
 }
 
 int main(void) {
