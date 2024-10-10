@@ -21,7 +21,7 @@ typedef u8 byte;
 #define CLEAR_BIT(val, bit) (val &= ~(BIT_MASK(bit)))
 
 void send_data_to_7seg(byte binary) {
-	for (int i = 0; i < 8; ++i) {
+	for (u8 i = 0; i < 8; ++i) {
 		// SCLK = 0
 		CLEAR_BIT(PORTD, 7);
 		// Agarro el bit en la pos i y lo pongo en bit 0
@@ -30,7 +30,7 @@ void send_data_to_7seg(byte binary) {
 		//
 		// 0b101 & (1<<1) => 0b00
 		// 0b00 >> 2 => 0b0
-		int bit = ((binary & (1 << i)) >> i) & 1;
+		u8 bit = ((binary & (1 << i)) >> i) & 1;
 		if (bit == 1) {
 			SET_BIT(PORTB, 0);
 		} else {
@@ -143,7 +143,7 @@ u16 average = 0;
 u16 samples = 0;
 
 ISR(ADC_vect) {
-	uint16_t duty = ADC;
+	u16 duty = ADC;
 	OCR1B = duty;
 
 	accumulator += duty;
