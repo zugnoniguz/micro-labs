@@ -10,7 +10,7 @@ $(BUILDDIR):
 upload: build
 	avrdude -c xplainedmini -p m328p -U flash:w:$(BUILDDIR)main.hex:i
 
-$(BUILDDIR)main.o: main.c
+$(BUILDDIR)main.o: main.c 7seg.h defs.h
 	avr-gcc $^ -mmcu=atmega328p -Wall -Wextra -pedantic -fdiagnostics-show-option -Werror -Os -o $@
 
 $(BUILDDIR)main.hex: $(BUILDDIR)main.o
