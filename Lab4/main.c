@@ -15,14 +15,6 @@ typedef struct {
 } ADCState;
 ADCState adcstate = {0};
 
-ISR(TIMER1_COMPA_vect) {
-	SET_BIT(PORTB, PORTB5);
-}
-
-ISR(TIMER1_COMPB_vect) {
-	CLEAR_BIT(PORTB, PORTB5);
-}
-
 ISR(ADC_vect) {
     u16 duty = ADC;
 
