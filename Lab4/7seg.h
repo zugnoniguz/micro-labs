@@ -85,5 +85,12 @@ void dec_to_7seg_dot(byte val, byte digit) {
 	bin_to_7seg(binval, digit);
 }
 
+void show_4digit(u16 val) {
+	dec_to_7seg((val / 1000) % 10, 0);
+	dec_to_7seg((val / 100 ) % 10, 1);
+	dec_to_7seg((val / 10  ) % 10, 2);
+	dec_to_7seg((val / 1   ) % 10, 3);
+}
+
 #endif // _7SEG_H
 
