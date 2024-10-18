@@ -18,9 +18,19 @@ ADCState adcstate = {0};
 ISR(ADC_vect) {
     u16 duty = ADC;
 
-	// 4.8828125 = 5/1024*1000
-	// TODO: Maybe fixed point math (cuz avr has no fp)
-	u16 value = (u16)(duty * 4.8828125);
+	// 4.8828125 = (Vref/1024)*(V/mV) = (5/1024)*1000
+	// 4.8828125 = 4 + 1/2^1 + 1/2^2 + 1/2^3 + 1/2^7;
+	//
+	// El punto de esto es que genera tipo 600 bytes menos porque gcc no tiene
+	// que generar las rutinas de multiplicación de punto flotante (ej 1494 -> 948)
+	//
+	// los términos al final son de corrección por el error que se genera al
+	// descartar los restors de las divisiones, que pueden acumular hasta a 3
+	// unidades más
+	//
+	// esto es el equivalente de:
+	// u16 value = duty * 4.8828125;
+	u16 value = (duty << 2) + (duty >> 1) + (duty >> 2) + (duty >> 3) + (duty >> 7) + (duty%2*64 + duty%4*32 + duty%8*16 + duty%128)/128;
 
     adcstate.accumulator += value;
     if (++adcstate.samples == MAX_SAMPLES) {
