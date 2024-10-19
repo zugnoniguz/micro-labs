@@ -5,8 +5,12 @@
 #include "defs.h"
 #include "7seg.h"
 
-#define SAMPLE_TIME 3
+// Tiempo entre cada refresco de la pantalla en ms
+#define REFRESH_TIME 150
+// Cantidad muestras del ADC para el promedio
 #define MAX_SAMPLES 50
+// Tiempo entre cada pulso de reloj
+#define SAMPLE_TIME (REFRESH_TIME / MAX_SAMPLES)
 
 typedef struct {
 	u32 accumulator;
@@ -60,7 +64,7 @@ int main(void) {
 	TCCR0A = BIT_MASK(WGM01);
 	// prescaler = 1024 y termino de configurar CTC
 	TCCR0B = BIT_MASK(CS02) | BIT_MASK(CS00);
-	// 1mS at 1024
+	// 15.6 = 1mS at 1024 prescaler
 	OCR0A = (u8)(15.6 * SAMPLE_TIME);
 	// Habilita recepción de interrupciones del timer0
 	// Output Compare Interrupt Enable 0 A
