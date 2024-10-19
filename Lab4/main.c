@@ -16,28 +16,20 @@ typedef struct {
 ADCState adcstate = {0};
 
 ISR(ADC_vect) {
-    u16 duty = ADC;
+	u16 duty = ADC;
 
-	// 4.8828125 = (Vref/1024)*(V/mV) = (5/1024)*1000
-	// 4.8828125 = 4 + 1/2^1 + 1/2^2 + 1/2^3 + 1/2^7;
-	//
-	// El punto de esto es que genera tipo 600 bytes menos porque gcc no tiene
-	// que generar las rutinas de multiplicación de punto flotante (ej 1494 -> 948)
-	//
-	// los términos al final son de corrección por el error que se genera al
-	// descartar los restors de las divisiones, que pueden acumular hasta a 3
-	// unidades más
-	//
-	// esto es el equivalente de:
-	// u16 value = duty * 4.8828125;
-	u16 value = (duty << 2) + (duty >> 1) + (duty >> 2) + (duty >> 3) + (duty >> 7) + (duty%2*64 + duty%4*32 + duty%8*16 + duty%128)/128;
+	// (Vref/1024)*(V/mV) = (5/1024)*1000 = 5000/1024
+	// (No simplifico los números porque el compilador lo optimiza más con los
+	// números grandes y resulta en binario más chico)
+	// u16 value = (duty * 625) / 128;
+	u16 value = (duty * 5000) / 1024;
 
-    adcstate.accumulator += value;
-    if (++adcstate.samples == MAX_SAMPLES) {
-        adcstate.average = adcstate.accumulator / MAX_SAMPLES;
-        adcstate.accumulator = 0;
-        adcstate.samples = 0;
-    }
+	adcstate.accumulator += value;
+	if (++adcstate.samples == MAX_SAMPLES) {
+		adcstate.average = adcstate.accumulator / MAX_SAMPLES;
+		adcstate.accumulator = 0;
+		adcstate.samples = 0;
+	}
 }
 
 ISR(TIMER0_COMPA_vect) {
@@ -65,11 +57,11 @@ int main(void) {
 
 	// TMR0 cuenta hasta OCR0A y luego reinicia su valor (CTC (Clear Timer on
 	// Compare))
-    TCCR0A = BIT_MASK(WGM01);
+	TCCR0A = BIT_MASK(WGM01);
 	// prescaler = 1024 y termino de configurar CTC
-    TCCR0B = BIT_MASK(CS02) | BIT_MASK(CS00);
+	TCCR0B = BIT_MASK(CS02) | BIT_MASK(CS00);
 	// 1mS at 1024
-    OCR0A = (u8)(15.6 * SAMPLE_TIME);
+	OCR0A = (u8)(15.6 * SAMPLE_TIME);
 	// Habilita recepción de interrupciones del timer0
 	// Output Compare Interrupt Enable 0 A
 	TIMSK0 = BIT_MASK(OCIE0A);
@@ -88,8 +80,8 @@ int main(void) {
 	// Interrupciones globales
 	sei();
 
-    while (1) {
+	while (1) {
 		loop();
-    }
+	}
 }
 
