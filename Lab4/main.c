@@ -47,18 +47,23 @@ int main(void) {
 	// Deshabilita interrupciones globales (por reset)
 	cli();
 
+	// --------------- LEDs ---------------
 	// 4 LEDs del shield son salidas, y 0 es SDI del 7seg
 	DDRB = BIT_MASK(DDB5) | BIT_MASK(DDB4) | BIT_MASK(DDB3) | BIT_MASK(DDB2) | BIT_MASK(DDB0);
 	// Empiezan apagados
 	PORTB = BIT_MASK(PORTB5) | BIT_MASK(PORTB4) | BIT_MASK(PORTB3) | BIT_MASK(PORTB2);
+	// --------------- ---------------
 
+	// --------------- 7SEG ---------------
 	// PD4 (LCHCLK) y PD7 (SCLK) son salidas
 	DDRD = BIT_MASK(PORTD7) | BIT_MASK(PORTD4);
 	// SCLK empieza en 0
 	CLEAR_BIT(PORTD, PORTD7);
 	// LCHCLK empieza en 0
 	CLEAR_BIT(PORTD, PORTD4);
+	// --------------- ---------------
 
+	// --------------- Timer0A ---------------
 	// TMR0 cuenta hasta OCR0A y luego reinicia su valor (CTC (Clear Timer on
 	// Compare))
 	TCCR0A = BIT_MASK(WGM01);
@@ -69,7 +74,9 @@ int main(void) {
 	// Habilita recepción de interrupciones del timer0
 	// Output Compare Interrupt Enable 0 A
 	TIMSK0 = BIT_MASK(OCIE0A);
+	// --------------- ---------------
 
+	// --------------- ADC ---------------
 	// VRef = Vcc y elijo ADC0 con el mux
 	ADMUX = BIT_MASK(REFS0);
 	// ADEN: Enable ADC
@@ -80,6 +87,7 @@ int main(void) {
 	ADCSRA = BIT_MASK(ADEN) | BIT_MASK(ADSC) | BIT_MASK(ADATE) | BIT_MASK(ADIE) | BIT_MASK(ADPS2) | BIT_MASK(ADPS1) | BIT_MASK(ADPS0);
 	// Selects Timer0 Compare A
 	ADCSRB = BIT_MASK(ADTS1) | BIT_MASK(ADTS0);
+	// --------------- ---------------
 
 	// Interrupciones globales
 	sei();
