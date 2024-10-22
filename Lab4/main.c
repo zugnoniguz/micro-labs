@@ -23,10 +23,9 @@ ISR(ADC_vect) {
 	u16 duty = ADC;
 
 	// (Vref/1024)*(V/mV) = (5/1024)*1000 = 5000/1024
-	// (No simplifico los números porque el compilador lo optimiza más con los
-	// números grandes y resulta en binario más chico)
-	// u16 value = (duty * 625) / 128;
-	u16 value = (duty * 5000) / 1024;
+	// u16 value = duty * 4.8828125;
+	u16 value = (duty << 2) + (duty >> 1) + (duty >> 2) + (duty >> 3) + (duty >> 7) + (duty%2*64 + duty%4*32 + duty%8*16 + duty%128)/128;
+
 
 	adcstate.accumulator += value;
 	if (++adcstate.samples == MAX_SAMPLES) {
