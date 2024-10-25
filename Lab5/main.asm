@@ -264,9 +264,10 @@ aleatorios_loop:
 	ldi r20, 5
 	call aleatorios_loop_l
 
-	; ya se calculó el numero pseudo-aleatorio de 32bits, voy a guardar los 32 bits (podria solo ir guardando de a 8)
-
-	; el número aleatorio lo guardo a partir de adonde apunta el registro Y, voy recorriendo hasta 512
+	; ya se calculó el numero pseudo-aleatorio de 32bits, voy a guardar los 32
+	; bits que calculé. el número aleatorio lo guardo a partir de adonde apunta
+	; el registro Y, voy recorriendo hasta el final del buffer. para que esto
+	; funcione, necesito que el tamaño de la memoria esté alineado a 4 bytes
 	st Y+, r16
 	st Y+, r17
 	st Y+, r18
