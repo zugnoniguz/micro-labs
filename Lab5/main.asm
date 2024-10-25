@@ -59,6 +59,7 @@ system_init:
 	;	PB0 es SD (serial data) para el display 7seg
 	;	PD7 es SCLK, el reloj de los shift registers del display 7seg
 	;	PD4 es LCHCLK, el reloj para decodificar los datos de los shift registers al display 7seg
+	;	TODO Add buttons
 
 	; PB0,2,3,4,5 son salidas
 	ldi r16, 0b00111101
@@ -89,7 +90,7 @@ system_init:
 	sts PCMSK1, r16
 
 	; Configuración de interrupciones TMR0
-	; Freq = Fclk/(prescaler * (1+OCR0A)
+	; Freq = Fclk/(prescaler * (1+OCR0A)) = 16_000_000/(256*250) = 250
 	ldi r16, 0b00000010
 	; Cuenta hasta OCR0A y vuelve a cero (Clear Timer on Compare) (cada compare dispara la interrupción).
 	out TCCR0A, r16
@@ -132,64 +133,74 @@ start:
 
 
 modo_transmisor:
-	ldi r16, 0xA3				;semilla de los números seudo-aleatorios (arbitraria)
+	; semilla de los números pseudo-aleatorios (arbitraria)
+	ldi r16, 0xA3
 	ldi r17, 0x82
 	ldi r18, 0xF0
 	ldi r19, 0x05
 
 modo_transmisor_2:
-	rcall aleatorios					;Genero los números aleatorios (genero un msg_buffer aleatorio)
-	rcall Chksum_512					;Genero Checksum
+	; Genero los números aleatorios (genero un msg_buffer aleatorio)
+	rcall aleatorios
+	; Genero Checksum
+	rcall Chksum_512
+
 	ldi r26, 0
 
-wait_4TX:							;acá me pongo a esperar que alguien presione cualquier botón
-	sbrs r26, 0			    ;Nota: la interrupcion del boton pone r26-bit0 en 1.
+; esta rutina espera hasta que alguien presione cualquier botón
+wait_4TX:
+	; Nota: la interrupcion del boton pone r26:0 en 1.
+	sbrs r26, 0
 	rjmp wait_4TX
 
-	cli									;deshabilito interrupciones para display y botones
+	; No quiero ser interrumpido mientras envío
+	cli
 	rcall TX_512
-	sei									;habilito interrupciones para disply y botones
+	; Después de enviar no pasa nada
+	sei
 
-	rjmp modo_transmisor_2				;empiezo todo de nuevo
+	; empiezo todo de nuevo
+	rjmp modo_transmisor_2
 
 
 
 modo_receptor:
-	ldi		r26,	0
+	ldi r26, 0
 
-wait_4RX:							;acá me pongo a esperar que alguien presione cualquier botón
-	sbrs r26, 0			    ;Nota: la interrupcion del boton cambia r26:0.
+; esta rutina espera hasta que alguien presione cualquier botón
+wait_4RX:
+	; Nota: la interrupcion del boton pone r26:0 en 1.
+	sbrs r26, 0
 	rjmp wait_4RX
 
-	; recibo 512 bytes y los dejo en msg_buffer
-	lds r16, UDR0			;me aseguro que el buffer esté vacio
+	; cuando estoy listo para leer recibo 512 bytes y los dejo en msg_buffer
+
+	; me aseguro que el buffer esté vacio
 	lds r16, UDR0
 	lds r16, UDR0
-	cli									;deshabilito interrupciones para disply y botones
-	rcall RX_512					    ;recibo 512 bytes por poling (es muy ineficiente)
-	sei									;habilito interrupciones para disply y botones
-	rcall Chksum_512					;calculo el nuevo Cheksum ... debería ser igual al original incluso si introduje errores
+	lds r16, UDR0
+
+	; No quiero ser interrumpido mientras leo
+	cli
+	; recibo 512 bytes por polling (es muy ineficiente)
+	rcall RX_512
+	; Después de leer interrumpime nomás
+	sei
+
+	; calculo el nuevo Cheksum ... debería ser igual al original incluso si introduje errores
+	rcall Chksum_512
 	rjmp modo_receptor
 
 
 
-;---------------------------------------------------------------------------------
-;Chksum	- calcula el Checksum del vector msg_buffer (512 valores, r5:r4 = chksum)
-;---------------------------------------------------------------------------------
+; calcula el checksum del vector msg_buffer (512 valores, r5:r4 = checksum)
 Chksum_512:
-	;apunto Y al primer byte del mensaje
-
-	;implementar
-	;implementar
-	;implementar
+	; TODO
+	; apunto Y al primer byte del mensaje
 
 chksum_loop:
-	;traigo 1 byte a sumar
-	;la suma la voy acumulando en r5:r4
-
-	;implementar
-	;implementar
-	;implementar
+	; traigo 1 byte a sumar
+	; la suma la voy acumulando en r5:r4
 
 	ret
 
@@ -197,51 +208,45 @@ chksum_loop:
 ;TX - rutina de transmisión serial USART. Transmite los 512 bytes de msg_buffer
 ;-----------------------------------------------------------------------------------------
 TX_512:
-;inicialización
-	;apunto Z al primer byte del vector de 512 bytes
-	;configuro usart como transmisor (UCSR0B)
+	; TODO
+	; inicialización
+	; apunto Z al primer byte del vector de 512 bytes
+	; configuro usart como transmisor (UCSR0B)
 
 TX_loop1:
-	;traigo el Byte a transmitir
-	;pongo a transmitir (UDR0)
+	; traigo el Byte a transmitir
+	; pongo a transmitir (UDR0)
 
 TX_loop2:
-	;espero a que termine la transmisión del byte por poling (UCSR0A)
+	; espero a que termine la transmisión del byte por poling (UCSR0A)
 
-
-;chequeo si llegué al final del buffer
+	; chequeo si llegué al final del buffer
 
 	ret
 
 
 
-;------------------------------------------------------------------------------
-;RX - rutina de recepción usart. Recibe 1024 bytes y los deja en de msg_buffer
-;IMPORTANTE: acá está SIN INTERRUPCIONES lo cual es ineficiente
-;------------------------------------------------------------------------------
+; rutina de recepción USART. Recibe 512 bytes y los deja en de msg_buffer
+; IMPORTANTE: acá está SIN INTERRUPCIONES lo cual es ineficiente
 RX_512:
-;inicialización
-	;apunto Z al primer byte del vector de 512 bytes
-	;configuro el USART como receptor (UCSR0B)
+	; inicialización
+	; apunto Z al primer byte del vector de 512 bytes
+	; configuro el USART como receptor (UCSR0B)
 
 RX_Wait:
-	;ahora poling para esperar recibir algo	(UDR0)
+	; ahora poling para esperar recibir algo	(UDR0)
 
-	;llego aquí solo si recibí algo
+	; llego aquí solo si recibí algo
 	; guardo lo que recibí
 
 
-	;chequeo si llegué al final del buffer
+	; chequeo si llegué al final del buffer
 
 	ret
 
 
-
-
-
-
 ;-------------------------------------------------------------------------------------
-;					*****			RUTINAS			*****
+;					*****			INTERRUPCIONES			*****
 ;-------------------------------------------------------------------------------------
 
 ; genera 512 bytes pseudo-aleatorios en msg_buffer
@@ -277,6 +282,7 @@ aleatorios_loop_l:
 	mov r1, r17
 	mov r2, r18
 	mov r3, r19
+
 ale_rota_l:
 	clc
 	rol r0
@@ -311,28 +317,35 @@ ale_rota_out:
 
 
 
-;-------------------------------------------------------------------------------------
-;   SACANUM
-;-------------------------------------------------------------------------------------
-;rutina que saca un número por el display,
-;paso en r16 el número a sacar en el nibble bajo, y en cuál de los 4 dígitos es, en el nibble alto de r16
-;r16 = 1000xxxx dígito menos significativo, r16 = 0100xxxx segundo dígito, r16 = 0010xxxx tercer dígito, r16 = 0001xxxx dígito más significativo.
-;Ejemplo:	r16 = 0b01000111 = 0x47, saca el número 7 en el dígito 2 del display de 7segmentos.
+; saca un número por el display,
+; paso en r16 el número a sacar en el nibble bajo, y en cuál de los 4 dígitos es, en el nibble alto de r16
+; r16 = 1000xxxx dígito menos significativo, r16 = 0100xxxx segundo dígito, r16 = 0010xxxx tercer dígito, r16 = 0001xxxx dígito más significativo.
+; Ejemplo:	r16 = 0b01000111 = 0x47, saca el número 7 en el dígito 2 del display de 7segmentos.
 
 sacanum:
-	push r16					; guardo una copia de r16
-	ldi zh, high(segmap<<1) ; Initialize Z-pointer
+	; guardo una copia de r16
+	push r16
+	; Cargar los valores de los segmentos en Z-pointer
+	; TODO: Why?
+	ldi zh, high(segmap<<1)
 	ldi zl, low(segmap<<1)
+
+	; queda el número 0-15
 	andi r16, 0x0F
+	; offset en los valores
 	add zl, r16
 	clr r16
+	; TODO: Is this necessary?
+	; TODO: When is r16 loaded up if it is cleared in the line above?
 	adc zh, r16
-	lpm r16, Z				; traigo de la memoria de Programa el 7-Seg
+	; traigo de la memoria de Programa el 7-Seg
 	call sacabyte
 	pop r16
 	call sacabyte
-	sbi PORTD, 4		;PD.4 a 1, es el reloj del latch
-	cbi PORTD, 4		;PD.4 a 0, es el reloj del latch
+	; PD4 (LCHCLK) a 1
+	sbi PORTD, 4
+	; PD4 (LCHCLK) a 0
+	cbi PORTD, 4
 	ret
 
 ;-------------------------------------------------------------------------------------
@@ -377,12 +390,8 @@ segmap:
 ; 2	- cada entrada a la interupción se saca un dígito del checksum por el display
 ; Registros utilizados:
 ;				r25 - indica el próximo digito a sacar, r25 = 00010000 ; 00100000 ; 01000000 ; 10000000 cambia cada entrada a la rutina.
-
 _tmr0_int:
-
-	;implemente el codigo aqui
-	;implemente el codigo aqui
-	;implemente el codigo aqui
+	; TODO
 
 	reti
 
@@ -392,11 +401,7 @@ _tmr0_int:
 ; recordar que se configuró la detección por cambio para que ante un cambio en el valor lógico de cualquiera de los 3 botones
 ; se dispara la interrupción. LA interrupción no distingué qué botón se apretó de modo que lo verifico dentro de la interrupción.
 ; Los botones se encuentran en PC.1, PC.2, PC.3 y recordar del esquemático del shield, que son activos por nivel bajo.
-;
 _pcint1_int:
-
-	;implemente el codigo aqui
-	;implemente el codigo aqui
-	;implemente el codigo aqui
+	; TODO
 
 	reti
