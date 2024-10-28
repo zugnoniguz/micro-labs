@@ -105,11 +105,13 @@ system_init:
 	sts TIMSK0, r16
 
 	; Inicializo USART para transmitir
-	; TODO: Add docs
 	ldi r16, 0b00001000
+	; Prendo TXen0, envío en TX0
 	sts UCSR0B, r16
 	ldi r16, 0b00000110
+	; USART ASíncrono y words de 8bit
 	sts UCSR0C, r16
+	; Baud = 0x67??? TODO Hay prescaler o algo?
 	ldi r16, 0x00
 	sts UBRR0H, r16
 	ldi r16, 0x67
