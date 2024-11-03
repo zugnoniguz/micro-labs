@@ -374,16 +374,19 @@ sacanum:
 	push r16
 	; Cargar los valores de los segmentos en Z-pointer
 	; TODO: Why?
-	ldi zh, high(segmap<<1)
-	ldi zl, low(segmap<<1)
+	; TODO: This only shows one number at a time
+	ldi zl, low(segmap << 1)
+	ldi zh, high(segmap << 1)
 
 	; queda el número 0-15
 	andi r16, 0x0F
-	; offset en los valores
-	add zl, r16
+	; añado el offset
+	add ZL, r16
 	clr r16
-	adc zh, r16
-	; traigo de la memoria de Programa el 7-Seg
+	adc ZH, r16
+
+	; leo el valor resultante
+	lpm r16, Z
 	call sacabyte
 	pop r16
 	call sacabyte
