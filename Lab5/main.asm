@@ -143,6 +143,8 @@ modo_transmisor_2:
 	rcall aleatorios
 	; Genero Checksum
 	rcall checksum_512
+	; Muestro en pantalla
+	rcall show_checksum
 
 	ldi r26, 0
 
@@ -213,6 +215,41 @@ checksum_loop:
 	cpi YH, high(msg_buffer_end)
 	brne checksum_loop
 	ret
+
+; muestra el valor r5:r4 en el display de 7seg
+show_checksum:
+	; dígito 1
+	mov r16, r4
+	andi r16, 0x0F
+	ori r16, 0b00010000
+	rcall sacanum
+
+	; dígito 2
+	mov r16, r4
+	lsr r16
+	lsr r16
+	lsr r16
+	lsr r16
+	ori r16, 0b00100000
+	rcall sacanum
+
+	; dígito 3
+	mov r16, r5
+	andi r16, 0x0F
+	ori r16, 0b01000000
+	rcall sacanum
+
+	; dígito 4
+	mov r16, r5
+	lsr r16
+	lsr r16
+	lsr r16
+	lsr r16
+	ori r16, 0b10000000
+	rcall sacanum
+
+	ret
+
 
 ;-----------------------------------------------------------------------------------------
 ;TX - rutina de transmisión serial USART. Transmite los 512 bytes de msg_buffer
@@ -332,7 +369,6 @@ ale_rota_out:
 ; paso en r16 el número a sacar en el nibble bajo, y en cuál de los 4 dígitos es, en el nibble alto de r16
 ; r16 = 1000xxxx dígito menos significativo, r16 = 0100xxxx segundo dígito, r16 = 0010xxxx tercer dígito, r16 = 0001xxxx dígito más significativo.
 ; Ejemplo:	r16 = 0b01000111 = 0x47, saca el número 7 en el dígito 2 del display de 7segmentos.
-
 sacanum:
 	; guardo una copia de r16
 	push r16
