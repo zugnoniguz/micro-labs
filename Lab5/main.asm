@@ -346,8 +346,6 @@ sacanum:
 	; offset en los valores
 	add zl, r16
 	clr r16
-	; TODO: Is this necessary?
-	; TODO: When is r16 loaded up if it is cleared in the line above?
 	adc zh, r16
 	; traigo de la memoria de Programa el 7-Seg
 	call sacabyte
