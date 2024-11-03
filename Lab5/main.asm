@@ -1,7 +1,7 @@
 ;	aleatorios -	genera el vector de 512 números pseudoaleatorios en el vector de RAM msg_buffer, utilizando algoritmo
 ;					XORSHIFT de 32 bits (https://en.wikipedia.org/wiki/Xorshift)
 ;
-;	Chksum_512 -	Calcula el checksum de los 512 bytes en msg_buffer,
+;	checksum_512 -	Calcula el checksum de los 512 bytes en msg_buffer,
 ;					guarda el resultado en r5:r4
 ;
 ;	TX_512	-		Transmite por el USART, los 1024 bytes de buffer_hamm
@@ -127,9 +127,6 @@ system_init:
 start:
 	; bandera teclado
 	ldi r26, 0x00
-	; checksum a 0
-	mov r5, r26
-	mov r4, r26
 
 	rjmp modo_transmisor
 
@@ -145,7 +142,7 @@ modo_transmisor_2:
 	; Genero los números aleatorios (genero un msg_buffer aleatorio)
 	rcall aleatorios
 	; Genero Checksum
-	rcall Chksum_512
+	rcall checksum_512
 
 	ldi r26, 0
 
@@ -190,20 +187,31 @@ wait_4RX:
 	sei
 
 	; calculo el nuevo Cheksum ... debería ser igual al original incluso si introduje errores
-	rcall Chksum_512
+	rcall checksum_512
 	rjmp modo_receptor
 
 
 
 ; calcula el checksum del vector msg_buffer (512 valores, r5:r4 = checksum)
-Chksum_512:
-	; TODO
-	; apunto Y al primer byte del mensaje
+checksum_512:
+	; Y apunta al primer byte del mensaje
+	ldi YL, low(msg_buffer)
+	ldi YH, high(msg_buffer)
 
-chksum_loop:
+checksum_loop:
+	clr r5
+	clr r4
 	; traigo 1 byte a sumar
 	; la suma la voy acumulando en r5:r4
+	ld r0, Y+
+	add r4, r0
+	clr r0
+	adc r5, r0
 
+	cpi YL, low(msg_buffer_end)
+	brne checksum_loop
+	cpi YH, high(msg_buffer_end)
+	brne checksum_loop
 	ret
 
 ;-----------------------------------------------------------------------------------------
