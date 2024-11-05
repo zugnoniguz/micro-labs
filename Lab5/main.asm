@@ -449,6 +449,26 @@ _tmr0_int:
 ; se dispara la interrupción. LA interrupción no distingué qué botón se apretó de modo que lo verifico dentro de la interrupción.
 ; Los botones se encuentran en PC.1, PC.2, PC.3 y recordar del esquemático del shield, que son activos por nivel bajo.
 _pcint1_int:
-	; TODO
+	push r31
+	in r31, SREG
+	push r31
 
+	in r30, PINC
+	cpi r30, 0x4C
+	breq set_bit_r26
+	cpi r30, 0x4A
+	breq set_bit_r26
+	cpi r30, 0x46
+	breq set_bit_r26
+
+_pcint1_int_exit:
+	pop r31
+	out SREG, r31
+	pop r31
 	reti
+
+; tengo que poner el bit 0 de r26 en 1
+; cuando se aprete algun boton
+set_bit_r26:
+	sbr r26, 0b00000001
+	rjmp _pcint1_int_exit
