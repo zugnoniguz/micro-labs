@@ -132,6 +132,19 @@ start:
 
 
 modo_transmisor:
+	; Inicializo USART para transmitir
+	ldi r16, 0b00001000
+	; Prendo TXen0, envío en TX0
+	sts UCSR0B, r16
+	ldi r16, 0b00000110
+	; USART ASíncrono y words de 8bit
+	sts UCSR0C, r16
+	; Baud = 0x67???
+	ldi r16, 0x00
+	sts UBRR0H, r16
+	ldi r16, 0x67
+	sts UBRR0L, r16
+
 	; semilla de los números pseudo-aleatorios (arbitraria)
 	ldi r16, 0xA3
 	ldi r17, 0x82
@@ -255,24 +268,30 @@ show_checksum:
 ;-----------------------------------------------------------------------------------------
 ;TX - rutina de transmisión serial USART. Transmite los 512 bytes de msg_buffer
 ;-----------------------------------------------------------------------------------------
+
 TX_512:
-	; TODO
-	; inicialización
 	; apunto Z al primer byte del vector de 512 bytes
-	; configuro usart como transmisor (UCSR0B)
+	ldi ZL, low(msg_buffer)
+	ldi ZH, high(msg_buffer)
 
 TX_loop1:
 	; traigo el Byte a transmitir
+	ld r0, Z+
 	; pongo a transmitir (UDR0)
+	out UDR0, r0
 
 TX_loop2:
 	; espero a que termine la transmisión del byte por poling (UCSR0A)
+	sbis UCSR0A
+	rjmp TX_LOOP2
 
 	; chequeo si llegué al final del buffer
+	cpi ZL, low(msg_buffer_end)
+	brne TX_loop1
+	cpi ZH, high(msg_buffer_end)
+	brne TX_LOOP
 
 	ret
-
-
 
 ; rutina de recepción USART. Recibe 512 bytes y los deja en de msg_buffer
 ; IMPORTANTE: acá está SIN INTERRUPCIONES lo cual es ineficiente
