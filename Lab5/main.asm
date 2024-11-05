@@ -374,8 +374,6 @@ sacanum:
 	; guardo una copia de r16
 	push r16
 	; Cargar los valores de los segmentos en Z-pointer
-	; TODO: Why?
-	; TODO: This only shows one number at a time
 	ldi zl, low(segmap << 1)
 	ldi zh, high(segmap << 1)
 
