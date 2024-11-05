@@ -200,9 +200,10 @@ checksum_512:
 	ldi YL, low(msg_buffer)
 	ldi YH, high(msg_buffer)
 
-checksum_loop:
 	clr r5
 	clr r4
+
+checksum_loop:
 	; traigo 1 byte a sumar
 	; la suma la voy acumulando en r5:r4
 	ld r0, Y+
