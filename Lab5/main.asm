@@ -180,6 +180,18 @@ wait_4TX:
 
 modo_receptor:
 	ldi r26, 0
+	; Inicializo USART para recibir
+	ldi r16, 0b00010000
+	; Prendo RXen0, envío en RX0
+	sts UCSR0B, r16
+	ldi r16, 0b00000110
+	; USART ASíncrono y words de 8bit
+	sts UCSR0C, r16
+	; Baud = 0x67
+	ldi r16, 0x00
+	sts UBRR0H, r16
+	ldi r16, 0x67
+	sts UBRR0L, r16
 
 ; esta rutina espera hasta que alguien presione cualquier botón
 wait_4RX:
@@ -190,6 +202,7 @@ wait_4RX:
 	; cuando estoy listo para leer recibo 512 bytes y los dejo en msg_buffer
 
 	; me aseguro que el buffer esté vacio
+	; load direct from data space --> lee directo del RAM
 	lds r16, UDR0
 	lds r16, UDR0
 	lds r16, UDR0
@@ -278,43 +291,54 @@ TX_loop1:
 	; traigo el Byte a transmitir
 	ld r0, Z+
 	; pongo a transmitir (UDR0)
-	out UDR0, r0
+	; UDR0 manda por le puerto UART el valor
+	sts UDR0, r0
 
 TX_loop2:
-	; espero a que termine la transmisión del byte por poling (UCSR0A)
-	sbis UCSR0A
-	rjmp TX_LOOP2
+	; espero a que termine la transmisión del byte por polling (UCSR0A)
+	lds	r0, UCSR0A
+	; skip if bit in register (is) set
+	sbrs r0, 6
+	rjmp TX_loop2
 
 	; chequeo si llegué al final del buffer
 	cpi ZL, low(msg_buffer_end)
 	brne TX_loop1
 	cpi ZH, high(msg_buffer_end)
-	brne TX_LOOP
+	brne TX_loop1
 
 	ret
 
 ; rutina de recepción USART. Recibe 512 bytes y los deja en de msg_buffer
 ; IMPORTANTE: acá está SIN INTERRUPCIONES lo cual es ineficiente
 RX_512:
-	; inicialización
 	; apunto Z al primer byte del vector de 512 bytes
-	; configuro el USART como receptor (UCSR0B)
+	ldi ZL, low(msg_buffer)
+	ldi ZH, high(msg_buffer)
 
 RX_Wait:
-	; ahora poling para esperar recibir algo	(UDR0)
+	; ahora polling para esperar recibir algo en (UDR0)
+	; POLLING: Se fija si recibió datos continuamente hasta que reciba algo
+	lds r0, UCSR0A
+	sbrs r0, 7
+	rjmp RX_Wait
 
-	; llego aquí solo si recibí algo
 	; guardo lo que recibí
-
+	; llego aquí solo si recibí algo
+	; UDR0 = UART Data Register 0 (lo que me llega por el UART)
+	lds r0, UDR0
+	; Store Indirect From Register to Data Space using Index Z
+	st Z+, r0
 
 	; chequeo si llegué al final del buffer
-
+	; Z son dos registros de 8 bits juntitos y pegaditos
+	cpi ZL, low(msg_buffer_end)
+	brne RX_Wait
+	cpi ZH, high(msg_buffer_end)
+	brne RX_Wait
+	; si son iguales me piro vampiro
 	ret
 
-
-;-------------------------------------------------------------------------------------
-;					*****			INTERRUPCIONES			*****
-;-------------------------------------------------------------------------------------
 
 ; genera 512 bytes pseudo-aleatorios en msg_buffer
 aleatorios:
@@ -445,6 +469,13 @@ segmap:
 .db	0b00000001, 0b00001001, 0b00010001, 0b11000001 ;"8" "9" "A" "b"
 .db	0b01100011, 0b10000101, 0b01100001, 0b01110001 ;"C" "d" "E" "F"
 
+
+
+
+
+;-------------------------------------------------------------------------------------
+;					*****			INTERRUPCIONES			*****
+;-------------------------------------------------------------------------------------
 
 ; ------------------------------------------------
 ; Rutina de atención a la interrupción del Timer0.
