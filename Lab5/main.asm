@@ -139,7 +139,7 @@ modo_transmisor:
 	ldi r16, 0b00000110
 	; USART ASíncrono y words de 8bit
 	sts UCSR0C, r16
-	; Baud = 0x67???
+	; Baud = 0x0067
 	ldi r16, 0x00
 	sts UBRR0H, r16
 	ldi r16, 0x67
@@ -164,6 +164,7 @@ modo_transmisor_2:
 ; esta rutina espera hasta que alguien presione cualquier botón
 wait_4TX:
 	; Nota: la interrupcion del boton pone r26:0 en 1.
+	rcall show_checksum
 	sbrs r26, 0
 	rjmp wait_4TX
 
@@ -174,12 +175,14 @@ wait_4TX:
 	sei
 
 	; empiezo todo de nuevo
-	rjmp modo_transmisor_2
+	clr r26
+	rjmp wait_4TX
 
 
 
 modo_receptor:
-	ldi r26, 0
+	clr r26
+
 	; Inicializo USART para recibir
 	ldi r16, 0b00010000
 	; Prendo RXen0, envío en RX0
@@ -196,6 +199,7 @@ modo_receptor:
 ; esta rutina espera hasta que alguien presione cualquier botón
 wait_4RX:
 	; Nota: la interrupcion del boton pone r26:0 en 1.
+	rcall show_checksum
 	sbrs r26, 0
 	rjmp wait_4RX
 
@@ -216,9 +220,8 @@ wait_4RX:
 
 	; calculo el nuevo Cheksum ... debería ser igual al original incluso si introduje errores
 	rcall checksum_512
-	rjmp modo_receptor
-
-
+	clr r26
+	rjmp wait_4RX
 
 ; calcula el checksum del vector msg_buffer (512 valores, r5:r4 = checksum)
 checksum_512:
@@ -417,8 +420,8 @@ sacanum:
 	; guardo una copia de r16
 	push r16
 	; Cargar los valores de los segmentos en Z-pointer
-	ldi zl, low(segmap << 1)
-	ldi zh, high(segmap << 1)
+	ldi ZL, low(segmap << 1)
+	ldi ZH, high(segmap << 1)
 
 	; queda el número 0-15
 	andi r16, 0x0F
@@ -463,6 +466,9 @@ loop_byte3:
 	brne loop_byte1
 	ret
 
+
+; cada byte en la lista representa una combinación de bits para encender o apagar los segmentos específicos
+; de un display de 7 segmentos y así formar un número o letra.
 segmap:
 .db	0b00000011, 0b10011111,	0b00100101, 0b00001101 ;"0" "1" "2" "3"
 .db	0b10011001,	0b01001001, 0b01000001,	0b00011111 ;"4" "5" "6" "7"
@@ -504,12 +510,12 @@ _pcint1_int:
 	push r31
 
 	in r30, PINC
-	cpi r30, 0x4C
-	breq set_bit_r26
-	cpi r30, 0x4A
-	breq set_bit_r26
-	cpi r30, 0x46
-	breq set_bit_r26
+	sbrs r30, 1
+	rjmp set_bit_r26
+	sbrs r30, 2
+	rjmp set_bit_r26
+	sbrs r30, 3
+	rjmp set_bit_r26
 
 _pcint1_int_exit:
 	pop r31
