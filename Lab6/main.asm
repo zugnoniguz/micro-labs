@@ -128,7 +128,7 @@ init:
 	sei
 
 
-;Programa principal
+; Programa principal
 start:
 	; borra el panel
 	call	borra_panel
@@ -146,14 +146,14 @@ start:
 	ldi		r18,	0x00
 	ldi		r17,	0x08
 	ldi		r16,	0x07
-	ldi		r20,	0x07				;en R20 está el color
+	ldi		r20,	0x07
 	call	copia_char
 
 	; Imprime un '1' Verde por pantalla
 	ldi		r18,	0x01
 	ldi		r17,	0x12
 	ldi		r16,	0x09
-	ldi		r20,	0x01				;en R20 está el color
+	ldi		r20,	0x01
 	call	copia_char
 
 espero:
@@ -161,60 +161,68 @@ espero:
 
 
 ;-------------------------------------------------------------------------------------
-;copia_img:
-;----------
-;Rutina que copia un bloque de 1024 bytes de la Flash de programa a la RAM de pantalla
-;en Screen.
+; copia_img:
+; ----------
+; Rutina que copia un bloque de 1024 bytes de la Flash de programa a la RAM de pantalla
+; en screen.
 ;
-;Parámetros: debo poner en Z(ZH:ZL) la dirección de comienzo de la imagen a copiar.
+; Parámetros: debo poner en Z(ZH:ZL) la dirección de comienzo de la imagen a copiar.
 ;-------------------------------------------------------------------------------------
-
 copia_img:
 	ldi		XL,	low(screen)			;apunto X al primer byte de la pantalla
 	ldi		XH,	high(screen)
 
 copia_loop1:
-	lpm		r17,	Z+						;traigo 1 byte a copiar a la pantalla
-	st		X+,		r17						;escribo la memoria de pantalla
+	; traigo 1 byte a copiar a la pantalla
+	lpm		r17,	Z+
+
+	; escribo en la memoria de la pantalla
+	st		X+,		r17
+
+	; si no llegué al final sigo copiando
 	cpi		XL,		low(screen_end)
 	brne	copia_loop1
-	cpi		XH,		high(screen_end)		;si llegué al final de la pantalla no copio más
+	cpi		XH,		high(screen_end)
 	brne	copia_loop1
+
 	ret
 
 ;-------------------------------------------------------------------------------------
-;borra_panel:
-;----------
-;Rutina que borra el display LED.
-;Escribe 1024 ceros en la RAM de pantalla
+; borra_panel:
+; ----------
+; Rutina que borra el display LED.
+; Escribe 1024 ceros en la RAM de pantalla
 ;-------------------------------------------------------------------------------------
 borra_panel:
-	ldi		XL,	low(screen)					;apunto de nuevo X al primer byte de la pantalla
+	; apunto X al primer byte de la pantalla
+	ldi		XL,	low(screen)
 	ldi		XH,	high(screen)
 	ldi		r17, 0x00
 
 borra_loop1:
 	st		X+,		r17
+
+	; si no llegué al final sigo copiando
 	cpi		XL,		low(screen_end)
 	brne	borra_loop1
-	cpi		XH,		high(screen_end)		;si llegué al final de la pantalla no copio más
+	cpi		XH,		high(screen_end)
 	brne	borra_loop1
 	ret
 
 ;-------------------------------------------------------------------------------------
-;copia_char:
-;----------
-;Rutina que copia un caracter en la memoria de pantalla. Por ahora pensado solo para
-;los números del 0 al 9 de tamaño fijo 8x10 pixeles. Por ahora solo están el '0' y el '1'
-;configurados en el mapa de caracteres pero la rutina funciona igual.
+; copia_char:
+; ----------
+; Rutina que copia un caracter en la memoria de pantalla. Por ahora pensado solo para
+; los números del 0 al 9 de tamaño fijo 8x10 pixeles. Por ahora solo están el '0' y el '1'
+; configurados en el mapa de caracteres pero la rutina funciona igual.
 ;
-;los carateres son de 8x10 puntos por tanto ocupan solo 10 bytes. Esta rutina toma los 10
-;bytes y bit a bit va programando la memoria de pantalla.
+; los carateres son de 8x10 puntos por tanto ocupan solo 10 bytes. Esta rutina toma los 10
+; bytes y bit a bit va programando la memoria de pantalla.
 ;
-;Parámetros:
+; Parámetros:
 ;	r18 = numero a imprimir del 0 al 9 (por ahora solo 0 y 1 disponibles)
-;	r16 y r17 = Fila y Columna del pixel superior izquierdo del caracter.
-;	r20 = color del caracter. 1-Verde 2-Rojo 4-Azul 3-Amarillo 5-cyan 6-lila 7-blanco 0-apagado
+; 	r16 y r17 = Fila y Columna del pixel superior izquierdo del caracter.
+; 	r20 = color del caracter. 1-Verde 2-Rojo 4-Azul 3-Amarillo 5-cyan 6-lila 7-blanco 0-apagado
 ;-------------------------------------------------------------------------------------
 
 copia_char:
@@ -358,6 +366,7 @@ LED_loop:
 	cbi		PORTD, 5
 
 	; traigo 2 bytes a sacar por la pantalla
+	; este es de las lineas de arriba
 	ld		r17,	Y+
 	; este es de las lineas de abajo
 	ld		r18,	X+
@@ -389,10 +398,10 @@ LED_loop:
 	out		PORTD,	r25
 	inc		r25
 	cpi		r25,	32
-	; si no llegué a la ultima linea vuelvo de la interrupción
+	; si no llegué a la última linea me voy
 	brne	LED_fin
 
-	; fin de pantalla, llevo r25 y Y al principio.
+	; si llegué a la última línea, reinicio. llevo r25 y Y al principio.
 	clr		r25
 	ldi		YL,	low(screen)
 	ldi		YH,	high(screen)
@@ -406,6 +415,7 @@ LED_fin:
 	pop		r16
 	out		SREG,	r16
 	pop		r16
+
 	reti
 
 _tmr1_int:
