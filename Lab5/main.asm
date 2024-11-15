@@ -37,10 +37,6 @@ jmp system_init
 .ORG 0x0008
 jmp _pcint1_int
 
-; vector de comparación A del timer 0
-.ORG 0x001C
-jmp _tmr0_int
-
 ; Data segment
 .DSEG
 
@@ -88,21 +84,6 @@ system_init:
 	ldi r16, 0b00001110
 	; Detectar cambios en (PCI9,PCI10,PCI11)
 	sts PCMSK1, r16
-
-	; Configuración de interrupciones TMR0
-	; Freq = Fclk/(prescaler * (1+OCR0A)) = 16_000_000/(256*250) = 250
-	ldi r16, 0b00000010
-	; Cuenta hasta OCR0A y vuelve a cero (Clear Timer on Compare) (cada compare dispara la interrupción).
-	out TCCR0A, r16
-	ldi r16, 0b00000100
-	; prescaler = 256
-	out TCCR0B, r16
-	ldi r16, 249
-	; comparo con 249
-	out OCR0A, r16
-	ldi r16, 0b00000010
-	; se habilitan interrupciones del timer
-	sts TIMSK0, r16
 
 	; Inicializo USART para transmitir
 	ldi r16, 0b00001000
@@ -482,21 +463,6 @@ segmap:
 ;-------------------------------------------------------------------------------------
 ;					*****			INTERRUPCIONES			*****
 ;-------------------------------------------------------------------------------------
-
-; ------------------------------------------------
-; Rutina de atención a la interrupción del Timer0.
-; ------------------------------------------------
-; como fue configurado el reloj interrumpe 250 veces/segundo
-;
-; Esta rutina hace varias cosas:
-; 1 - salva contexto de registros que utiliza
-; 2	- cada entrada a la interupción se saca un dígito del checksum por el display
-; Registros utilizados:
-;				r25 - indica el próximo digito a sacar, r25 = 00010000 ; 00100000 ; 01000000 ; 10000000 cambia cada entrada a la rutina.
-_tmr0_int:
-	; TODO
-
-	reti
 
 ; ---------------------------------------------------------------------------
 ; Rutina de atención a la interrupción por cambio en el estado de los botones
