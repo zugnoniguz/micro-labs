@@ -220,56 +220,93 @@ borra_loop1:
 ; bytes y bit a bit va programando la memoria de pantalla.
 ;
 ; Parámetros:
-;	r18 = numero a imprimir del 0 al 9 (por ahora solo 0 y 1 disponibles)
+;	r18 = numero del caracter a imprimir
 ; 	r16 y r17 = Fila y Columna del pixel superior izquierdo del caracter.
 ; 	r20 = color del caracter. 1-Verde 2-Rojo 4-Azul 3-Amarillo 5-cyan 6-lila 7-blanco 0-apagado
 ;-------------------------------------------------------------------------------------
-
 copia_char:
-	ldi		XL,	low(screen)				;X apunta al comienzo de la memoria de pantalla
+	; qué tan ancho es un char (<=8)
+	.equ CHAR_WIDTH 0x08
+	; qué tan alto es un char
+	.equ CHAR_HEIGHT 0x0a
+
+	; X apunta al comienzo de la memoria de pantalla
+	ldi		XL,	low(screen)
 	ldi		XH,	high(screen)
 
-	ldi		ZL,	low(char_0<<1)			;apunto Z al comienzo del mapa de caracteres char_0
+	; apunto Z al comienzo del mapa de caracteres char_0
+	ldi		ZL,	low(char_0<<1)
 	ldi		ZH,	high(char_0<<1)
 
-	;Ahora ajusto Z según el caracter que quiero imprimir
-	ldi		r19,	0x0A
-	mul		r18,	r19				;cada 0x0A es un caracter
-	clc
+	; Ahora ajusto Z según el caracter que quiero imprimir
+
+	; cada CHAR_HEIGHT es un caracter
+	ldi		r19,	CHAR_HEIGHT
+	mul		r18,	r19
 	add		ZL,		r0
 	adc		ZH,		r1
 
-	;Ahora ajusto X segun la fila/columna donde quiero imprimir
+	; Ahora ajusto X segun la fila/columna donde quiero imprimir
 	ldi		r18,	0x20
-	mul		r16,	r18				;cada 0x20 es un salto de renglón
-	clc
-	add		r0,		r17				;ahora en r1:r0 está lo que me tengo que desplazar en la pantalla
-	ldi		r16,	0
+	; cada 0x20 es un salto de renglón
+	mul		r16,	r18
+
+	; ahora en r1:r0 está lo que me tengo que desplazar en la pantalla
+	add		r0,		r17
+	clr		r16
 	adc		r1,		r16
-	clc
 	add		XL,		r0
 	adc		XH,		r1
 
-;ahora que esta todo listo, en este loop copio el caracter a la pantalla.
-	ldi		r16,	10					;son 10 byte por caracter
+	; ahora que esta todo listo, en este loop copio el caracter a la pantalla.
+	; son CHAR_HEIGHT bytes por caracter
+	ldi		r16,	CHAR_HEIGHT
+
 copia_char1:
-	lpm		r19,	Z+					;traigo 1 Byte con los bits del caracter
-	ldi		r18,	8					;8 bits por byte
+	; traigo 1 Byte con los bits del caracter
+	lpm		r19,	Z+
+	; 8 bits por byte
+	ldi		r18,	CHAR_WIDTH
+
 copia_char2:
-	ld		r17,	X					;traigo 1 byte de la memoria de pantalla
-	rol		r19
+	; traigo 1 byte de la memoria de pantalla
+	ld		r17,	X
+	lsl		r19
 	brcc	copia_char3
-	mov		r17,	r20					;en r20 está el color que quiero imprimir
+	; en r20 está el color que quiero imprimir
+	mov		r17,	r20
+
 copia_char3:
-	st		X+,		r17					;guardo el byte nuevo o el que estaba antes en la memoria de pantalla
+	; guardo el byte nuevo o el que estaba antes en la memoria de pantalla
+	st		X+,		r17
 	dec		r18
 	brne	copia_char2
 
-	adiw	XL,	0x18					;avanzo 0x18 = 24 lugares para el cambio de fila en la memoria de pantalla
-										;(no es 32 porque ya avancé 8 al dibujar la linea).
+	; avanzo 0x18 = 24 lugares para el cambio de fila en la memoria de pantalla
+	; (no es 32 porque ya avancé 8 al dibujar la linea).
+	adiw	XL,	0x18
+
 	dec		r16
 	brne	copia_char1
 	ret
+
+; Mapa de caracteres
+; Esto es un 0
+char_0:
+.db 0b00111000, 0b01111100
+.db 0b11000110, 0b11000110
+.db 0b11000110, 0b11000110
+.db 0b11000110, 0b11000110
+.db 0b01111100, 0b00111000
+
+; Esto es un 1
+char_1:
+.db 0b00111000, 0b01111000
+.db 0b00011000, 0b00011000
+.db 0b00011000, 0b00011000
+.db 0b00011000, 0b00011000
+.db 0b00011000, 0b00111100
+
 
 ;imagen ejemplo con cuadrados de colores para pruebas
 Imagen_1:
@@ -305,20 +342,6 @@ Imagen_1:
 .db	0x00, 0x00, 0x00, 0x00, 0x07, 0x07, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00, 0x07, 0x07, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00, 0x07, 0x07, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00, 0x07, 0x07, 0x07, 0x07
 .db	0x07, 0x07, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00, 0x07, 0x07, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00, 0x07, 0x07, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00, 0x07, 0x07, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00
 .db	0x07, 0x07, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00, 0x07, 0x07, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00, 0x07, 0x07, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00, 0x07, 0x07, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00
-
-;Mapa de caracteres, por ahora solo '0' y '1'
-char_0:
-.db 0b00111000, 0b01111100
-.db 0b11000110, 0b11000110
-.db 0b11000110, 0b11000110
-.db 0b11000110, 0b11000110
-.db 0b01111100, 0b00111000
-char_1:
-.db 0b00111000, 0b01111000
-.db 0b00011000, 0b00011000
-.db 0b00011000, 0b00011000
-.db 0b00011000, 0b00011000
-.db 0b00011000, 0b00111100
 
 ; RUTINAS de interrupción
 ;-------------------------------------------------------------------------------------
