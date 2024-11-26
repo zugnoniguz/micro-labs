@@ -99,6 +99,7 @@ start:
 	ldi		YL,	low(screen)					;apunto Y al primer byte de la pantalla
 	ldi		YH,	high(screen)
 	ldi		r28, 0x00
+	clr r22
 ;-------------------------------------------------------------------------------------
 	sei							;habilito las interrupciones globales(set interrupt flag)
 ;-------------------------------------------------------------------------------------
@@ -109,28 +110,18 @@ start:
 ;borra el panel
 	call	borra_panel
 
-loop:
 ;copia una imagen de fondo en el panel
 	ldi		ZL,	low(Imagen_1<<1)			;apunto Z a la imagen de fondo a copiar y luego efectivamente la copia.
 	ldi		ZH,	high(Imagen_1<<1)
 	call	copia_img						;comentar esta línea para no mostrar la imagen de fondo y ver mejor los caracteres.
 
-;	Imprime un '0' blanco por pantalla,
-;	r18 = numero a imprimir
-;	r17 y r16 = Fila y Columna del pixel superior izquierdo del número.
-;	r20 = color del caracter. 1-Verde 2-Rojo 4-Azul 3-Amarillo 5-cyan 6-lila 7-blanco 0-apagado
-	ldi		r18,	0x00
-	ldi		r17,	0x18
-	ldi		r16,	0x0C
-	ldi		r20,	0x03				;en R20 está el color
-	call	copia_char
+loop:
 
-;	Imprime un '1' Verde por pantalla
-	ldi		r18,	0x01
-	ldi		r17,	0x0C
-	ldi		r16,	0x0C
-	ldi		r20,	0x012				;en R20 está el color
-	call	copia_char
+	;ldi		r18,	0x02
+	;ldi		r17,	0x00
+	;ldi		r16,	0x00
+	;ldi		r20,	0x01				;en R20 está el color
+	;call	copia_char
 
 	rjmp loop
 
@@ -172,7 +163,7 @@ _tmr0_int:
 	push	r27
 	push	r26
 
-	movw	XH:XL, YH:YL				;Y apunta a la mitad de abajo
+	movw	XH:XL, YH:YL						;Y apunta a la mitad de abajo
 	inc		R27							;le sumo 512 a X para apuntar a la parte de abajo de la pantalla
 	inc		R27
 
@@ -265,6 +256,89 @@ borra_loop1:
 	brne	borra_loop1
 	ret
 
+
+borra_celdas:
+	clr r21
+
+borra_celdas_loop:
+	push r21
+
+	ldi r18, 0x00
+	ldi r20, 0x00
+	rcall coloca_char
+
+	pop r21
+	inc r21
+
+	cpi r21, 8
+	brne borra_celdas_loop
+
+	ret
+
+
+
+;-------------------------------------------------------------------------------------
+;coloca_char:
+;----------
+; Rutina que copia un caracter en la memoria de pantalla. Utilizando
+;
+;
+;Parámetros:
+;	r18 = numero a imprimir del 0 al 9 (por ahora solo 0 y 1 disponibles)
+;	r21 = posición en la grilla (0-8)
+;	r20 = color del caracter. 1-Verde 2-Rojo 4-Azul 3-Amarillo 5-cyan 6-lila 7-blanco 0-apagado
+;-------------------------------------------------------------------------------------
+coloca_char:
+	; Primera fila
+	ldi r16, 0x00
+
+	ldi r17, 0x00
+	cpi r21, 0
+	breq coloca_char_exit
+
+	ldi r17, 0x0C
+	cpi r21, 1
+	breq coloca_char_exit
+
+	ldi r17, 0x18
+	cpi r21, 2
+	breq coloca_char_exit
+
+	; Segunda fila
+	ldi r16, 0x0C
+
+	ldi r17, 0x00
+	cpi r21, 3
+	breq coloca_char_exit
+
+	ldi r17, 0x0C
+	cpi r21, 4
+	breq coloca_char_exit
+
+	ldi r17, 0x18
+	cpi r21, 5
+	breq coloca_char_exit
+
+	; Tercera fila
+	ldi r16, 0x18
+
+	ldi r17, 0x00
+	cpi r21, 6
+	breq coloca_char_exit
+
+	ldi r17, 0x0C
+	cpi r21, 7
+	breq coloca_char_exit
+
+	ldi r17, 0x18
+	cpi r21, 8
+	breq coloca_char_exit
+
+coloca_char_exit:
+	rcall copia_char
+
+	ret
+
 ;-------------------------------------------------------------------------------------
 ;copia_char:
 ;----------
@@ -285,8 +359,8 @@ copia_char:
 	ldi		XL,	low(screen)				;X apunta al comienzo de la memoria de pantalla
 	ldi		XH,	high(screen)
 
-	ldi		ZL,	low(char_X<<1)			;apunto Z al comienzo del mapa de caracteres char_0
-	ldi		ZH,	high(char_X<<1)
+	ldi		ZL,	low(char_full<<1)			;apunto Z al comienzo del mapa de caracteres char_0
+	ldi		ZH,	high(char_full<<1)
 
 	;Ahora ajusto Z según el caracter que quiero imprimir
 	ldi		r19,	0x08
@@ -362,17 +436,29 @@ Imagen_1:
 .db	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x07, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x07, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 .db	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x07, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x07, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 ;Mapa de caracteres, por ahora solo '0' y '1'
+char_full:
+.db 0b11111111, 0b11111111
+.db 0b11111111, 0b11111111
+.db 0b11111111, 0b11111111
+.db 0b11111111, 0b11111111
+
 char_X:
 .db 0b10000001, 0b01000010
 .db 0b00100100, 0b00011000
 .db 0b00011000, 0b00100100
 .db 0b01000010, 0b10000001
 
-char_0:
+char_O:
 .db 0b00111100, 0b01000010
 .db 0b10000001, 0b10000001
 .db 0b10000001, 0b10000001
 .db 0b01000010, 0b00111100
+
+char_S:
+.db 0b00000000, 0b00000000
+.db 0b00111100, 0b00100100
+.db 0b00100100, 0b00111100
+.db 0b00000000, 0b00000000
 
 
 
@@ -382,7 +468,26 @@ _tmr1_int:
 	in		r16,	SREG
 	push	XH
 	push	XL
+	push r16
+	push r17
+	push r18
+	push r20
+	push r21
 
+	call borra_celdas
+
+	ldi r18, 0x01
+	mov r21, r22
+	ldi r20, 0x03
+	call coloca_char
+
+	inc r22
+
+	pop r21
+	pop r20
+	pop r18
+	pop r17
+	pop r16
 	pop		XL
 	pop		XH
 	pop		r16
