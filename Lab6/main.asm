@@ -292,45 +292,45 @@ coloca_char:
 	; Primera fila
 	ldi r16, 0x00
 
-	ldi r17, 0x00
+	ldi r17, 0x0C * 0
 	cpi r21, 0
 	breq coloca_char_exit
 
-	ldi r17, 0x0C
+	ldi r17, 0x0C * 1
 	cpi r21, 1
 	breq coloca_char_exit
 
-	ldi r17, 0x18
+	ldi r17, 0x0C * 2
 	cpi r21, 2
 	breq coloca_char_exit
 
 	; Segunda fila
 	ldi r16, 0x0C
 
-	ldi r17, 0x00
+	ldi r17, 0x0C * 0
 	cpi r21, 3
 	breq coloca_char_exit
 
-	ldi r17, 0x0C
+	ldi r17, 0x0C * 1
 	cpi r21, 4
 	breq coloca_char_exit
 
-	ldi r17, 0x18
+	ldi r17, 0x0C * 2
 	cpi r21, 5
 	breq coloca_char_exit
 
 	; Tercera fila
 	ldi r16, 0x18
 
-	ldi r17, 0x00
+	ldi r17, 0x0C * 0
 	cpi r21, 6
 	breq coloca_char_exit
 
-	ldi r17, 0x0C
+	ldi r17, 0x0C * 1
 	cpi r21, 7
 	breq coloca_char_exit
 
-	ldi r17, 0x18
+	ldi r17, 0x0C * 2
 	cpi r21, 8
 	breq coloca_char_exit
 
@@ -481,8 +481,6 @@ _tmr1_int:
 	ldi r20, 0x03
 	call coloca_char
 
-	inc r22
-
 	pop r21
 	pop r20
 	pop r18
@@ -514,19 +512,23 @@ puertoC_:
 	reti
 
  decrementar_contador:
-	cpi		r28,	0
+	cpi		r22,	0
 	breq	limite_izq
-	dec		r28
 
+	dec		r22
 	ret
-aumentar_contador:
-	cpi		r28,	8
-	breq	limite_der
-	inc		r28
 
 limite_izq:
-	ldi		r28, 8
+	ldi		r22, 8
 	ret
+
+aumentar_contador:
+	cpi		r22,	8
+	breq	limite_der
+
+	inc		r22
+	ret
+
 limite_der:
-	ldi		r28,0
+	ldi		r22,0
 	ret
