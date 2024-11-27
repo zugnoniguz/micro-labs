@@ -37,10 +37,13 @@ screen_end:			.byte 1			;solo para marcar el final del buffer
 ; declaro los vectores de interrupción
 .ORG 0x0000
 	jmp		start		;dirección de comienzo (vector de reset)
+.ORG 0x008
+	jmp		puertoC_
 .ORG 0x0016
 	jmp		_tmr1_int	;salto atención a rutina de comparación A del timer 1
 .ORG 0x001C
 	jmp		_tmr0_int	;salto atención a rutina de comparación A del timer 0
+
 
 ; ---------------------------------------------------------------------------------------
 ; acá empieza el programa
@@ -270,7 +273,7 @@ borra_celdas_loop:
 	pop r21
 	inc r21
 
-	cpi r21, 8
+	cpi r21, 9
 	brne borra_celdas_loop
 
 	ret
@@ -468,6 +471,14 @@ _tmr1_int:
 	in		r16,	SREG
 	push	XH
 	push	XL
+
+	pop		XL
+	pop		XH
+	pop		r16
+	out		SREG,	r16
+	reti
+
+refrescar_pantalla:
 	push r16
 	push r17
 	push r18
@@ -486,12 +497,8 @@ _tmr1_int:
 	pop r18
 	pop r17
 	pop r16
-	pop		XL
-	pop		XH
-	pop		r16
-	out		SREG,	r16
-	reti
 
+	ret
 
 puertoC_:
 ;desactivar las interrupciones
@@ -500,11 +507,14 @@ puertoC_:
 	push	r27
 
 	sbis	PINC,	1
-	rcall	decrementar_contador
+	rjmp	decrementar_contador
 	sbis	PINC,	2
-	rjmp	aumentar_contador
+	rjmp	puertoc_exit
 	sbis	PINC,	3
 	rjmp	aumentar_contador
+
+puertoc_exit:
+	rcall refrescar_pantalla
 
 	pop		r27
 	out		SREG,	r27
@@ -516,19 +526,19 @@ puertoC_:
 	breq	limite_izq
 
 	dec		r22
-	ret
+	rjmp puertoc_exit
 
 limite_izq:
 	ldi		r22, 8
-	ret
+	rjmp puertoc_exit
 
 aumentar_contador:
 	cpi		r22,	8
-	breq	limite_der
+	brge	limite_der
 
 	inc		r22
-	ret
+	rjmp puertoc_exit
 
 limite_der:
 	ldi		r22,0
-	ret
+	rjmp puertoc_exit
