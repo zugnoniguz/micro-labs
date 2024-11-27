@@ -102,7 +102,9 @@ start:
 	ldi		YL,	low(screen)					;apunto Y al primer byte de la pantalla
 	ldi		YH,	high(screen)
 	ldi		r28, 0x00
-	clr r22
+	ldi		r24,0x00
+	clr		r22
+	clr		r23
 ;-------------------------------------------------------------------------------------
 	sei							;habilito las interrupciones globales(set interrupt flag)
 ;-------------------------------------------------------------------------------------
@@ -457,13 +459,6 @@ char_O:
 .db 0b10000001, 0b10000001
 .db 0b01000010, 0b00111100
 
-char_S:
-.db 0b00000000, 0b00000000
-.db 0b00111100, 0b00100100
-.db 0b00100100, 0b00111100
-.db 0b00000000, 0b00000000
-
-
 
 
 _tmr1_int:
@@ -471,6 +466,11 @@ _tmr1_int:
 	in		r16,	SREG
 	push	XH
 	push	XL
+
+	inc		r23
+
+
+	rcall refrescar_pantalla
 
 	pop		XL
 	pop		XH
@@ -487,11 +487,18 @@ refrescar_pantalla:
 
 	call borra_celdas
 
-	ldi r18, 0x01
+	cpi		r24,0
+	breq	turno0
+	cpi		r24,1
+	breq	turnoX
+
+	ldi r18, 0x02
 	mov r21, r22
-	ldi r20, 0x03
+	ldi r20, 0x02
+	sbrs	r23, 0
 	call coloca_char
 
+refrescar_pantalla_exit:
 	pop r21
 	pop r20
 	pop r18
@@ -499,6 +506,22 @@ refrescar_pantalla:
 	pop r16
 
 	ret
+
+turno0:
+	ldi r18, 0x01
+	mov r21, r22
+	ldi r20, 0x02
+	sbrs	r23, 0
+	call coloca_char
+	rjmp refrescar_pantalla_exit
+
+turnoX:
+	ldi r18, 0x02
+	mov r21, r22
+	ldi r20, 0x05
+	sbrs	r23, 0
+	call coloca_char
+	rjmp refrescar_pantalla_exit
 
 puertoC_:
 ;desactivar las interrupciones
@@ -509,12 +532,13 @@ puertoC_:
 	sbis	PINC,	1
 	rjmp	decrementar_contador
 	sbis	PINC,	2
-	rjmp	puertoc_exit
+	rjmp	marcar_posicion
 	sbis	PINC,	3
 	rjmp	aumentar_contador
 
 puertoc_exit:
-	rcall refrescar_pantalla
+	clr		r23
+	rcall	refrescar_pantalla
 
 	pop		r27
 	out		SREG,	r27
@@ -542,3 +566,16 @@ aumentar_contador:
 limite_der:
 	ldi		r22,0
 	rjmp puertoc_exit
+
+marcar_posicion:
+	cpi		r24,0
+	breq	es_cero
+	cpi		r24,1
+	breq	es_uno
+
+es_cero:
+	ldi		r24,1
+	rjmp	puertoc_exit
+es_uno:
+	ldi		r24,0
+	rjmp	puertoc_exit
