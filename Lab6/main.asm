@@ -640,6 +640,9 @@ _puertoc_int:
 	push r27
 	in r27, SREG
 	push r27
+	push XL
+	push XH
+	push r16
 
 	sbis PINC, 1
 	rjmp decrementar_contador
@@ -652,6 +655,9 @@ _puertoc_int_exit:
 	clr r23
 	rcall refrescar_pantalla
 
+	pop r16
+	pop XH
+	pop XL
 	pop r27
 	out SREG, r27
 	pop r27
@@ -663,21 +669,48 @@ _puertoc_int_exit:
 	brlo limite_izq
 
 	dec r22
-	rjmp _puertoc_int_exit
+	rjmp decrementar_contador_loop
 
 limite_izq:
 	ldi r22, 8
+	rjmp decrementar_contador_loop
+
+decrementar_contador_loop:
+	ldi XL, low(tablero)
+	ldi XH, high(tablero)
+	clr r16
+	add XL, r22
+	adc XH, r16
+
+	ld r16, X
+	cpi r16, 0
+	brne decrementar_contador
+
 	rjmp _puertoc_int_exit
+
 
 aumentar_contador:
 	cpi r22, 8
 	brge limite_der
 
 	inc r22
-	rjmp _puertoc_int_exit
+	rjmp aumentar_contador_loop
 
 limite_der:
-	ldi r22,0
+	ldi r22, 0
+	rjmp aumentar_contador_loop
+
+aumentar_contador_loop:
+	ldi XL, low(tablero)
+	ldi XH, high(tablero)
+	clr r16
+	add XL, r22
+	adc XH, r16
+
+	ld r16, X
+	cpi r16, 0
+	brne aumentar_contador
+
 	rjmp _puertoc_int_exit
 
 marcar_posicion:
