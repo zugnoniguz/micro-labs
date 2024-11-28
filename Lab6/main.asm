@@ -1,112 +1,153 @@
 ;
-; Programa Ejemplo MAnejo display LED 32x32
+; Programa Ta-Te-Ti
 ;
-; Created: 10/9/2021 11:46:51
-; Author : Curso Microprocesadores - Oct 2022
+; Created: 19/11/2024
+; Author : Martony - Weyrauch - Zugnoni
 ;
 
 .include "m328Pdef.inc"
 
-;Breve descripción:
-;Programa ejemplo para manejar un display de 32x32.
-;Defino una memoria de pantalla en RAM de 1024bytes. 1byte = 1 pixel (32 x 32 = 1024)
-;de c/u uso solo 3 bits que indican el RGB del pixel (solo on/off).
+; Breve descripción:
+; Programa para jugar al Ta-Te-Ti.
+; Defino una memoria de pantalla en RAM de 1024bytes. 1byte = 1 pixel (32 x 32 = 1024)
+; de c/u uso solo 3 bits que indican el RGB del pixel (solo on/off).
 ;
-;configuro el timer0 para interrumpir 1250 veces por segundo.
-;luego en cada interrupción barro 1 linea cada vez.
+; configuro el timer0 para interrumpir 1250 veces por segundo. luego en cada
+; interrupción barro 1 linea cada vez.
 ;
-;configuro el timer1 para interrumpir 1 vez por segundo, puede utilzar para hacer un reloj.
-;por ahora solo modifica el color de 1 pixel para confirmar que el timer1 funciona correctamente.
+; configuro el timer1 para interrumpir 1 vez por segundo, puede utilzar para
+; hacer un reloj. por ahora solo modifica el color de 1 pixel para
+; confirmar que el timer1 funciona correctamente.
 ;
 ; Pines de control del display:
 ;   PB5:PB0 = RGB1:RGB0
 ;   PC6:PC0 = LE:Clk:OE:ABCD
 ;
-;Importante: la interrupción del timer0 utiliza el registro Y(r29:r28) y r25, no se pueden utilizar en
-;otras rutinas.
-;Y(r29:r28) - dirección en la RAM de oantalla de la próxima linea a barrer
-;r25 - #de linea a barrer en la próxima interrupción.
+; Importante: la interrupción del timer0 utiliza el registro Y(r29:r28) y r25,
+; no se pueden utilizar en otras rutinas.
+; Y(r29:r28) - dirección en la RAM de oantalla de la próxima linea a barrer
+; r25 - #de linea a barrer en la próxima interrupción.
 
-;aquí defino la memoria pantalla en RAM recordar que la directiva .DSEG aclara que esto va en RAM.
 .DSEG
-screen:				.byte 1024		;reservo 1024 bytes para la memoria de pantalla.
-screen_end:			.byte 1			;solo para marcar el final del buffer
-tablero:			.byte 9
-tablero_end:		.byte 1
+; reservo 1024 bytes para la memoria de pantalla. lo escrito aquí se manda a la pantalla.
+screen: .byte 1024
+; solo para marcar el final del buffer
+screen_end: .byte 1
+; memoria para las celdas del tablero
+tablero: .byte 9
+; solo para marcar el final del buffer
+tablero_end: .byte 1
 
-; comienzo del programa principal ... la directive .CSEG aclara que esto va en FLASH de programa.
 .CSEG
-; declaro los vectores de interrupción
+
+; vectores de interrupción
+
+; dirección de comienzo (vector de reset).
 .ORG 0x0000
-	jmp		start		;dirección de comienzo (vector de reset)
+	jmp reset
+; Cambio de estado de PINC (los botone).
 .ORG 0x008
-	jmp		_puertoc_int
+	jmp _puertoc_int
+; comparación A del timer 1
 .ORG 0x0016
-	jmp		_tmr1_int	;salto atención a rutina de comparación A del timer 1
+	jmp _tmr1_int
+; comparación A del timer 0
 .ORG 0x001C
-	jmp		_tmr0_int	;salto atención a rutina de comparación A del timer 0
+	jmp _tmr0_int
 
 
 ; ---------------------------------------------------------------------------------------
 ; acá empieza el programa
-start:
-;configuro los puertos:
-;	PB0 PB1 PB2 - RGB0   PB3 PB4 PB5 - RGB1
-    ldi		r16,	0b00111111
-	out		DDRB,	r16			;PB0 a PB5 son salidas
-	ldi		r16,	0x00
-	out		PORTB,	r16			;apago PORTB
+reset:
+	; configuro los puertos:
+	; PB0 PB1 PB2 - RGB0
+	; PB3 PB4 PB5 - RGB1
 
-;	configuro PD0:7 no se va a usar, lo configuro como entradas.
-	ldi		r16,	0b00000000
-	out		DDRC,	r16			;PC0:7 son entradas
+	; PB0 a PB5 son salidas
+	ldi r16, 0b00111111
+	out DDRB, r16
+	; apago PORTB
+	ldi r16, 0x00
+	out PORTB, r16
 
-;	PD3 a PD0 = ABCD indica la línea del display que estoy escribiendo
-;	PD4 = OE(asumo activa nivel alto), PD5 = Clk serial, PD6 = LE (STB del Latch)
-	ldi		r16,	0b01111111
-	out		DDRD,	r16			;configuro PD.0 a PD.6 como salidas
-  	ldi		r16,	0b00000000
-	out		PORTD,	r16			;inicializo todo en 0
-;-------------------------------------------------------------------------------------
-;Configuro el TMR0 y su interrupcion.
-	ldi		r16,	0b00000010
-	out		TCCR0A,	r16			;configuro para que cuente hasta OCR0A y vuelve a cero (reset on compare), ahí dispara la interrupción
-	ldi		r16,	0b00000100
-	out		TCCR0B,	r16			;prescaler = 256
-	ldi		r16,	24
-	out		OCR0A,	r16			;comparo con 49			fint0 = 16000000/256/50 = 1250Hz
-	ldi		r16,	0b00000010
-	sts		TIMSK0,	r16			;habilito la interrupción (falta habilitar global)
-;-------------------------------------------------------------------------------------
-;Configuro el TMR1 y su interrupcion.
-	ldi		r16,	0b00000000
-	sts		TCCR1A,	r16			;configuro para que cuente hasta OCR0A y vuelve a cero (reset on compare), ahí dispara la interrupción
-	ldi		r16,	0b00001101
-	sts		TCCR1B,	r16			;prescaler = 1024
-	ldi		r16,	high(15624)
-	sts		OCR1AH,	r16
-	ldi		r16,	low(15624)
-	sts		OCR1AL,	r16			;OCR1A = 15625		fint0 = 16000000/1024/15625 = 1Hz
-	ldi		r16,	0b00000010
-	sts		TIMSK1,	r16			;habilito la interrupción (falta habilitar global)
+	; PD0:7 no se va a usar, lo configuro como entradas.
+	ldi r16, 0b00000000
+	out DDRC, r16
 
-;------------------------------------------------------------------------------------
-;configuro botones
-	ldi		r16,	0b00000010
-	sts		PCICR,	r16			;habilita PCI1 (PCINT14..8)
-	ldi		r16,	0b00001110
-	sts		PCMSK1,	r16			;habilita PCINT9, PCINT10, PCINT11
+	; PD3 a PD0 = ABCD indica la línea del display que estoy escribiendo
+	; PD4 = OE(asumo activa nivel alto), PD5 = Clk serial, PD6 = LE (STB del Latch)
+
+	; configuro PD.0 a PD.6 como salidas
+	ldi r16, 0b01111111
+	out DDRD, r16
+	; apago PORTD
+	ldi r16, 0b00000000
+	out PORTD, r16
+
+	;-------------------------------------------------------------------------------------
+	; Configuro el TMR0 y su interrupcion.
+
+	; cuenta hasta OCR0A y vuelve a cero (reset on compare), ahí dispara la interrupción
+	ldi r16, 0b00000010
+	out TCCR0A, r16
+	; prescaler = 256
+	ldi r16, 0b00000100
+	out TCCR0B, r16
+	; comparo con 49
+	; fint0 = 16000000/256/50 = 1250Hz
+	ldi r16, 24
+	out OCR0A, r16
+	; habilito la interrupción (falta habilitar global)
+	ldi r16, 0b00000010
+	sts TIMSK0, r16
+
+	;-------------------------------------------------------------------------------------
+	; Configuro el TMR1 y su interrupcion.
+
+	; cuenta hasta OCR0A y vuelve a cero (reset on compare), ahí dispara la interrupción
+	ldi r16, 0b00000000
+	sts TCCR1A, r16
+	; prescaler = 1024
+	ldi r16, 0b00001101
+	sts TCCR1B, r16
+	; OCR1A = 15625
+	; fint0 = 16000000/1024/15625 = 1Hz
+	ldi r16, high(15624)
+	sts OCR1AH, r16
+	ldi r16, low(15624)
+	sts OCR1AL, r16
+
+	; habilito la interrupción (falta habilitar global)
+	ldi r16, 0b00000010
+	sts TIMSK1, r16
+
+	;------------------------------------------------------------------------------------
+	; configuro botones
+	; habilita PCI1 (PCINT14..8)
+	ldi r16, 0b00000010
+	sts PCICR, r16
+	; habilita PCINT9, PCINT10, PCINT11 (los botones)
+	ldi r16, 0b00001110
+	sts PCMSK1, r16
 
 
-;-------------------------------------------------------------------------------------
-;Inicializo algunos registros que voy a usar como variables.
-	ldi		r25,	0x00					;inicializo r25 para el display indica qué línea estoy barriendo
-	ldi		YL,	low(screen)					;apunto Y al primer byte de la pantalla
-	ldi		YH,	high(screen)
-	clr		r22								; indica en qué celda está parado el jugador (0-8)
-	clr		r23								; indica si el cursor debe ser visible o no
-	clr		r24								; indica de quién es el turno actual (0 cruz, 1 círculo)
-;-------------------------------------------------------------------------------------
+	;-------------------------------------------------------------------------------------
+	; Inicializo algunos registros que voy a usar como variables.
+
+	; r25 indica qué línea estoy barriendo del display.
+	ldi r25, 0x00
+	; Y apunta al primer byte de la pantalla
+	ldi YL, low(screen)
+	ldi YH, high(screen)
+	; indica en qué celda está parado el jugador (0-8)
+	clr r22
+	; indica si el cursor debe ser visible o no
+	clr r23
+	; indica de quién es el turno actual (0 cruz, 1 círculo)
+	clr r24
+
+	;-------------------------------------------------------------------------------------
+	; Limpio el tablero
 	ldi XL, low(tablero)
 	ldi XH, high(tablero)
 
@@ -119,41 +160,34 @@ loop_clean_tablero:
 	brne loop_clean_tablero
 
 
+	;-------------------------------------------------------------------------------------
+	; habilito las interrupciones globales(set interrupt flag)
+	sei
+	;-------------------------------------------------------------------------------------
+
 ;-------------------------------------------------------------------------------------
-	sei							;habilito las interrupciones globales(set interrupt flag)
+; Programa principal
 ;-------------------------------------------------------------------------------------
+start:
+	; borra el panel
+	call borra_panel
 
+	; copia una imagen de fondo en el panel
+	; apunto Z a la imagen de fondo a copiar y luego efectivamente la copia.
+	ldi ZL, low(Imagen_1<<1)
+	ldi ZH, high(Imagen_1<<1)
 
-;Programa principal
-
-;borra el panel
-	call	borra_panel
-
-;copia una imagen de fondo en el panel
-	ldi		ZL,	low(Imagen_1<<1)			;apunto Z a la imagen de fondo a copiar y luego efectivamente la copia.
-	ldi		ZH,	high(Imagen_1<<1)
-	call	copia_img						;comentar esta línea para no mostrar la imagen de fondo y ver mejor los caracteres.
-
-loop:
-
-	;ldi		r18,	0x02
-	;ldi		r17,	0x00
-	;ldi		r16,	0x00
-	;ldi		r20,	0x01				;en R20 está el color
-	;call	copia_char
-
-	rjmp loop
-
+	call copia_img
 
 
 ; Ahora me quedo esperando sin hacer nada o puedo hacer otras tareas;
 ; una vez que la memoria pantalla fué escrita se encarga la interrupcion del timer0.
-; Pruebe modificar desde la herramienta la memoria de pantalla ditrectamente.
 espero:
 	nop
 	nop
 	nop
-	rjmp	espero
+	rjmp espero
+
 
 ;RUTINAS
 ;-------------------------------------------------------------------------------------
@@ -294,70 +328,6 @@ borra_celdas_loop:
 
 	ret
 
-
-
-;-------------------------------------------------------------------------------------
-;coloca_char:
-;----------
-; Rutina que copia un caracter en la memoria de pantalla. Utilizando
-;
-;
-;Parámetros:
-;	r18 = numero a imprimir del 0 al 9 (por ahora solo 0 y 1 disponibles)
-;	r21 = posición en la grilla (0-8)
-;	r20 = color del caracter. 1-Verde 2-Rojo 4-Azul 3-Amarillo 5-cyan 6-lila 7-blanco 0-apagado
-;-------------------------------------------------------------------------------------
-coloca_char:
-	; Primera fila
-	ldi r16, 0x00
-
-	ldi r17, 0x0C * 0
-	cpi r21, 0
-	breq coloca_char_exit
-
-	ldi r17, 0x0C * 1
-	cpi r21, 1
-	breq coloca_char_exit
-
-	ldi r17, 0x0C * 2
-	cpi r21, 2
-	breq coloca_char_exit
-
-	; Segunda fila
-	ldi r16, 0x0C
-
-	ldi r17, 0x0C * 0
-	cpi r21, 3
-	breq coloca_char_exit
-
-	ldi r17, 0x0C * 1
-	cpi r21, 4
-	breq coloca_char_exit
-
-	ldi r17, 0x0C * 2
-	cpi r21, 5
-	breq coloca_char_exit
-
-	; Tercera fila
-	ldi r16, 0x18
-
-	ldi r17, 0x0C * 0
-	cpi r21, 6
-	breq coloca_char_exit
-
-	ldi r17, 0x0C * 1
-	cpi r21, 7
-	breq coloca_char_exit
-
-	ldi r17, 0x0C * 2
-	cpi r21, 8
-	breq coloca_char_exit
-
-coloca_char_exit:
-	rcall copia_char
-
-	ret
-
 ;-------------------------------------------------------------------------------------
 ;copia_char:
 ;----------
@@ -474,22 +444,84 @@ char_O:
 .db 0b01000010, 0b00111100
 
 
+;-------------------------------------------------------------------------------------
+;coloca_char:
+;----------
+; Rutina que copia un caracter en la memoria de pantalla.
+;
+;Parámetros:
+;	r18 = numero a imprimir del 0 al 9 (por ahora solo 0 y 1 disponibles)
+;	r21 = posición en la grilla (0-8)
+;	r20 = color del caracter. 1-Verde 2-Rojo 4-Azul 3-Amarillo 5-cyan 6-lila 7-blanco 0-apagado
+;-------------------------------------------------------------------------------------
+coloca_char:
+	; Primera fila
+	ldi r16, 0x00
+
+	ldi r17, 0x0C * 0
+	cpi r21, 0
+	breq coloca_char_exit
+
+	ldi r17, 0x0C * 1
+	cpi r21, 1
+	breq coloca_char_exit
+
+	ldi r17, 0x0C * 2
+	cpi r21, 2
+	breq coloca_char_exit
+
+	; Segunda fila
+	ldi r16, 0x0C
+
+	ldi r17, 0x0C * 0
+	cpi r21, 3
+	breq coloca_char_exit
+
+	ldi r17, 0x0C * 1
+	cpi r21, 4
+	breq coloca_char_exit
+
+	ldi r17, 0x0C * 2
+	cpi r21, 5
+	breq coloca_char_exit
+
+	; Tercera fila
+	ldi r16, 0x18
+
+	ldi r17, 0x0C * 0
+	cpi r21, 6
+	breq coloca_char_exit
+
+	ldi r17, 0x0C * 1
+	cpi r21, 7
+	breq coloca_char_exit
+
+	ldi r17, 0x0C * 2
+	cpi r21, 8
+	breq coloca_char_exit
+
+coloca_char_exit:
+	rcall copia_char
+
+	ret
 
 _tmr1_int:
-	push	r16							;guardo contexto: registros y banderas
-	in		r16,	SREG
-	push	XH
-	push	XL
+	; guardo contexto: registros y banderas
+	push r16
+	in r16, SREG
+	push r16
+	push XH
+	push XL
 
-	inc		r23
-
+	inc r23
 
 	rcall refrescar_pantalla
 
-	pop		XL
-	pop		XH
-	pop		r16
-	out		SREG,	r16
+	pop XL
+	pop XH
+	pop r16
+	out SREG,	r16
+	pop r16
 	reti
 
 refrescar_pantalla:
