@@ -586,11 +586,9 @@ mostrar_celdas_colocadas:
 	ldi XL, low(tablero)
 	ldi XH, high(tablero)
 	clr r17
-	dec r17
 
 celdas_colocadas_loop:
 	ld r16, X+
-	inc r17
 
 	cpi r16, 0
 	breq celdas_colocadas_loop_exit
@@ -616,11 +614,14 @@ celdas_colocadas_charO_color:
 celdas_colocadas_loop_cont:
 	push XL
 	push XH
+	push r17
 	call coloca_char
+	pop r17
 	pop XH
 	pop XL
 
 celdas_colocadas_loop_exit:
+	inc r17
 	cpi XL, low(tablero_end)
 	brne celdas_colocadas_loop
 	cpi XH, high(tablero_end)
