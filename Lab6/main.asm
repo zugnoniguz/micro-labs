@@ -31,6 +31,8 @@
 .DSEG
 screen:				.byte 1024		;reservo 1024 bytes para la memoria de pantalla.
 screen_end:			.byte 1			;solo para marcar el final del buffer
+tablero:			.byte 9
+tablero_end:		.byte 1
 
 ; comienzo del programa principal ... la directive .CSEG aclara que esto va en FLASH de programa.
 .CSEG
@@ -105,6 +107,19 @@ start:
 	ldi		r24,0x00
 	clr		r22
 	clr		r23
+;-------------------------------------------------------------------------------------
+	ldi XL, low(tablero)
+	ldi XH, high(tablero)
+
+loop_clean_tablero:
+	st X+, r22
+
+	cpi XL, low(tablero_end)
+	brne loop_clean
+	cpi XH, high(tablero_end)
+	brne loop_clean
+
+
 ;-------------------------------------------------------------------------------------
 	sei							;habilito las interrupciones globales(set interrupt flag)
 ;-------------------------------------------------------------------------------------
@@ -568,6 +583,19 @@ limite_der:
 	rjmp puertoc_exit
 
 marcar_posicion:
+	ldi		XL, low(tablero)
+	ldi		XH, high(tablero)
+
+	add		XL, r22
+	push	r22
+	ldi		r22,0
+	adc		XH, r22
+	pop		r22
+
+	inc		r24
+	st		X,	r24
+	dec		r24
+
 	cpi		r24,0
 	breq	es_cero
 	cpi		r24,1
