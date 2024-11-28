@@ -2,7 +2,7 @@
 ; Programa Ta-Te-Ti
 ;
 ; Created: 19/11/2024
-; Author : Martony - Weyrauch - Zugnoni
+; Author : Martony - Weyrauch - Zugnoni - Lorenzo
 ;
 
 .include "m328Pdef.inc"
