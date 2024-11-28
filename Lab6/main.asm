@@ -115,9 +115,9 @@ loop_clean_tablero:
 	st X+, r22
 
 	cpi XL, low(tablero_end)
-	brne loop_clean
+	brne loop_clean_tablero
 	cpi XH, high(tablero_end)
-	brne loop_clean
+	brne loop_clean_tablero
 
 
 ;-------------------------------------------------------------------------------------
@@ -588,7 +588,7 @@ marcar_posicion:
 
 	add		XL, r22
 	push	r22
-	ldi		r22,0
+	clr		r22
 	adc		XH, r22
 	pop		r22
 
@@ -596,14 +596,9 @@ marcar_posicion:
 	st		X,	r24
 	dec		r24
 
-	cpi		r24,0
-	breq	es_cero
-	cpi		r24,1
-	breq	es_uno
+	push r16
+	ldi r16, 1
+	eor r24, r16
+	pop r16
 
-es_cero:
-	ldi		r24,1
-	rjmp	puertoc_exit
-es_uno:
-	ldi		r24,0
-	rjmp	puertoc_exit
+	rjmp puertoc_exit
