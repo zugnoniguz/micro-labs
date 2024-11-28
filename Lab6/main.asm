@@ -501,6 +501,8 @@ refrescar_pantalla:
 
 	call borra_celdas
 
+	rcall mostrar_celdas_colocadas
+
 	rcall mostrar_cursor
 
 refrescar_pantalla_exit:
@@ -538,6 +540,63 @@ turnoO:
 mostrar_cursor_exit:
 	sbrs r23, 0
 	call coloca_char
+
+	ret
+
+; ---------------------------------------------------------------------------------------
+; mostrar_celdas_colocadas
+; ---------------------------------------------------------------------------------------
+mostrar_celdas_colocadas:
+	push XL
+	push XH
+	push r17
+
+	ldi XL, low(tablero)
+	ldi XH, high(tablero)
+	clr r17
+	dec r17
+
+celdas_colocadas_loop:
+	ld r16, X+
+	inc r17
+
+	cpi r16, 0
+	breq celdas_colocadas_loop_exit
+
+	; Letra
+	mov r18, r16
+	; Posición
+	mov r21, r17
+	; Color
+	cpi r16, 1
+	breq celdas_colocadas_charX_color
+	cpi r16, 2
+	breq celdas_colocadas_charO_color
+
+celdas_colocadas_charX_color:
+	ldi r20, 0x02
+	rjmp celdas_colocadas_loop_cont
+
+celdas_colocadas_charO_color:
+	ldi r20, 0x05
+	rjmp celdas_colocadas_loop_cont
+
+celdas_colocadas_loop_cont:
+	push XL
+	push XH
+	call coloca_char
+	pop XH
+	pop XL
+
+celdas_colocadas_loop_exit:
+	cpi XL, low(tablero_end)
+	brne celdas_colocadas_loop
+	cpi XH, high(tablero_end)
+	brne celdas_colocadas_loop
+
+	pop r17
+	pop XH
+	pop XL
 
 	ret
 
