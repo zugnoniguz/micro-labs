@@ -40,7 +40,7 @@ tablero_end:		.byte 1
 .ORG 0x0000
 	jmp		start		;dirección de comienzo (vector de reset)
 .ORG 0x008
-	jmp		puertoC_
+	jmp		_puertoc_int
 .ORG 0x0016
 	jmp		_tmr1_int	;salto atención a rutina de comparación A del timer 1
 .ORG 0x001C
@@ -103,10 +103,9 @@ start:
 	ldi		r25,	0x00					;inicializo r25 para el display indica qué línea estoy barriendo
 	ldi		YL,	low(screen)					;apunto Y al primer byte de la pantalla
 	ldi		YH,	high(screen)
-	ldi		r28, 0x00
-	ldi		r24,0x00
-	clr		r22
-	clr		r23
+	clr		r22								; indica en qué celda está parado el jugador (0-8)
+	clr		r23								; indica si el cursor debe ser visible o no
+	clr		r24								; indica de quién es el turno actual (0 cruz, 1 círculo)
 ;-------------------------------------------------------------------------------------
 	ldi XL, low(tablero)
 	ldi XH, high(tablero)
@@ -502,16 +501,7 @@ refrescar_pantalla:
 
 	call borra_celdas
 
-	cpi		r24,0
-	breq	turno0
-	cpi		r24,1
-	breq	turnoX
-
-	ldi r18, 0x02
-	mov r21, r22
-	ldi r20, 0x02
-	sbrs	r23, 0
-	call coloca_char
+	rcall mostrar_cursor
 
 refrescar_pantalla_exit:
 	pop r21
@@ -522,83 +512,99 @@ refrescar_pantalla_exit:
 
 	ret
 
-turno0:
-	ldi r18, 0x01
+; ---------------------------------------------------------------------------------------
+; mostrar_cursor
+; ---------------------------------------------------------------------------------------
+mostrar_cursor:
 	mov r21, r22
-	ldi r20, 0x02
-	sbrs	r23, 0
-	call coloca_char
-	rjmp refrescar_pantalla_exit
+
+	cpi r24, 0
+	breq turnoX
+	cpi r24, 1
+	breq turnoO
 
 turnoX:
+	ldi r18, 0x01
+	ldi r20, 0x02
+
+	rjmp mostrar_cursor_exit
+
+turnoO:
 	ldi r18, 0x02
-	mov r21, r22
 	ldi r20, 0x05
-	sbrs	r23, 0
+
+	rjmp mostrar_cursor_exit
+
+mostrar_cursor_exit:
+	sbrs r23, 0
 	call coloca_char
-	rjmp refrescar_pantalla_exit
 
-puertoC_:
-;desactivar las interrupciones
-	push	r27
-	in		r27,	SREG
-	push	r27
+	ret
 
-	sbis	PINC,	1
-	rjmp	decrementar_contador
-	sbis	PINC,	2
-	rjmp	marcar_posicion
-	sbis	PINC,	3
-	rjmp	aumentar_contador
+; ---------------------------------------------------------------------------------------
+; _puertoc_int
+; ---------------------------------------------------------------------------------------
+_puertoc_int:
+	push r27
+	in r27, SREG
+	push r27
 
-puertoc_exit:
-	clr		r23
-	rcall	refrescar_pantalla
+	sbis PINC, 1
+	rjmp decrementar_contador
+	sbis PINC, 2
+	rjmp marcar_posicion
+	sbis PINC, 3
+	rjmp aumentar_contador
 
-	pop		r27
-	out		SREG,	r27
-	pop		r27
+_puertoc_int_exit:
+	clr r23
+	rcall refrescar_pantalla
+
+	pop r27
+	out SREG, r27
+	pop r27
 	reti
 
  decrementar_contador:
-	cpi		r22,	0
-	breq	limite_izq
+	cpi r22, 0
+	breq limite_izq
+	brlo limite_izq
 
-	dec		r22
-	rjmp puertoc_exit
+	dec r22
+	rjmp _puertoc_int_exit
 
 limite_izq:
-	ldi		r22, 8
-	rjmp puertoc_exit
+	ldi r22, 8
+	rjmp _puertoc_int_exit
 
 aumentar_contador:
-	cpi		r22,	8
-	brge	limite_der
+	cpi r22, 8
+	brge limite_der
 
-	inc		r22
-	rjmp puertoc_exit
+	inc r22
+	rjmp _puertoc_int_exit
 
 limite_der:
-	ldi		r22,0
-	rjmp puertoc_exit
+	ldi r22,0
+	rjmp _puertoc_int_exit
 
 marcar_posicion:
-	ldi		XL, low(tablero)
-	ldi		XH, high(tablero)
-
-	add		XL, r22
-	push	r22
-	clr		r22
-	adc		XH, r22
-	pop		r22
-
-	inc		r24
-	st		X,	r24
-	dec		r24
+	ldi XL, low(tablero)
+	ldi XH, high(tablero)
 
 	push r16
+
+	add XL, r22
+	clr r16
+	adc XH, r16
+
+	mov r16, r24
+	inc r16
+	st X, r16
+
 	ldi r16, 1
 	eor r24, r16
+
 	pop r16
 
-	rjmp puertoc_exit
+	rjmp _puertoc_int_exit
