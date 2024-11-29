@@ -146,7 +146,7 @@ reset:
 	; indica de quién es el turno actual (0 cruz, 1 círculo)
 	clr r24
 	; indica si el juego termino
-	clr r26
+	clr r30
 
 	;-------------------------------------------------------------------------------------
 	; Limpio el tablero
@@ -176,10 +176,12 @@ start:
 
 	; copia una imagen de fondo en el panel
 	; apunto Z a la imagen de fondo a copiar y luego efectivamente la copia.
+	push r30
 	ldi ZL, low(Imagen_1<<1)
 	ldi ZH, high(Imagen_1<<1)
 
 	call copia_img
+	pop r30
 
 
 ; Ahora me quedo esperando sin hacer nada o puedo hacer otras tareas;
@@ -347,6 +349,7 @@ borra_celdas_loop:
 ;-------------------------------------------------------------------------------------
 
 copia_char:
+	push r30
 	ldi		XL,	low(screen)				;X apunta al comienzo de la memoria de pantalla
 	ldi		XH,	high(screen)
 
@@ -390,6 +393,8 @@ copia_char3:
 										;(no es 32 porque ya avancé 8 al dibujar la linea).
 	dec		r16
 	brne	copia_char1
+
+	pop r30
 	ret
 
 ;imagen ejemplo con cuadrados de colores para pruebas
@@ -515,10 +520,14 @@ _tmr1_int:
 	push XH
 	push XL
 
+	cpi r30, 0x42
+	breq _tmr1_int_exit
+
 	inc r23
 
 	rcall refrescar_pantalla
 
+_tmr1_int_exit:
 	pop XL
 	pop XH
 	pop r16
@@ -646,6 +655,9 @@ _puertoc_int:
 	push XH
 	push r16
 
+	cpi r30, 0x42
+	breq _puertoc_int_exit
+
 	sbis PINC, 1
 	rjmp decrementar_contador
 	sbis PINC, 2
@@ -654,9 +666,15 @@ _puertoc_int:
 	rjmp aumentar_contador
 
 _puertoc_int_exit:
+	cpi r30, 0x42
+	brne _puertoc_refresh_pantalla
+	rjmp _puertoc_int_actually_exits
+
+_puertoc_refresh_pantalla:
 	clr r23
 	rcall refrescar_pantalla
 
+_puertoc_int_actually_exits:
 	pop r16
 	pop XH
 	pop XL
@@ -741,9 +759,12 @@ marcar_posicion:
 
 	pop r16
 
-	rcall aumentar_contador_f
+	rcall condicion_victoria
 
-	;rcall condicion_victoria
+	cpi r30, 0x42
+	breq _puertoc_int_exit
+
+	rcall aumentar_contador_f
 
 	rjmp _puertoc_int_exit
 
@@ -918,5 +939,13 @@ condicion_victoria_exit:
 	ret
 
 victoria:
-	ldi r26, 0x42
-	ret
+	ldi r30, 0x42
+
+	push r30
+	ldi ZL, low(victory_player_1 << 1)
+	ldi ZH, high(victory_player_1 << 1)
+
+	call copia_img
+	pop r30
+
+	rjmp condicion_victoria_exit
