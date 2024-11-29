@@ -2,7 +2,7 @@
 ; Programa Ta-Te-Ti
 ;
 ; Created: 19/11/2024
-; Author : Martony - Weyrauch - Zugnoni - Lorenzo
+; Author : Martony - Weyrauch - Zugnoni
 ;
 
 .include "m328Pdef.inc"
@@ -145,6 +145,8 @@ reset:
 	clr r23
 	; indica de quién es el turno actual (0 cruz, 1 círculo)
 	clr r24
+	; indica si el juego termino
+	clr r26
 
 	;-------------------------------------------------------------------------------------
 	; Limpio el tablero
@@ -663,7 +665,11 @@ _puertoc_int_exit:
 	pop r27
 	reti
 
- decrementar_contador:
+decrementar_contador:
+	rcall decrementar_contador_f
+	rjmp _puertoc_int_exit
+
+ decrementar_contador_f:
 	cpi r22, 0
 	breq limite_izq
 	brlo limite_izq
@@ -684,12 +690,15 @@ decrementar_contador_loop:
 
 	ld r16, X
 	cpi r16, 0
-	brne decrementar_contador
+	brne decrementar_contador_f
 
-	rjmp _puertoc_int_exit
-
+	ret
 
 aumentar_contador:
+	rcall aumentar_contador_f
+	rjmp _puertoc_int_exit
+
+aumentar_contador_f:
 	cpi r22, 8
 	brge limite_der
 
@@ -709,9 +718,9 @@ aumentar_contador_loop:
 
 	ld r16, X
 	cpi r16, 0
-	brne aumentar_contador
+	brne aumentar_contador_f
 
-	rjmp _puertoc_int_exit
+	ret
 
 marcar_posicion:
 	ldi XL, low(tablero)
@@ -732,4 +741,182 @@ marcar_posicion:
 
 	pop r16
 
+	rcall aumentar_contador_f
+
+	;rcall condicion_victoria
+
 	rjmp _puertoc_int_exit
+
+condicion_victoria:
+	push r16
+	push r17
+	push r18
+
+condicion_diagonal_1:
+	; verificamos la diagonal principal: 0,4,8
+	ldi XL, low(tablero)
+	ldi XH, high(tablero)
+	ld r16, X
+	adiw X, 4
+	ld r17, X
+	adiw X, 4
+	ld r18, X
+
+	cpi r16, 0
+	breq condicion_diagonal_2
+	cp r16, r17
+	brne condicion_diagonal_2
+	cp r16, r18
+	brne condicion_diagonal_2
+
+	rjmp victoria
+
+condicion_diagonal_2:
+	; verificamos la diagonal secundaria: 2,4,6
+	ldi XL, low(tablero)
+	ldi XH, high(tablero)
+	adiw X, 2
+	ld r16, X
+	adiw X, 2
+	ld r17, X
+	adiw X, 2
+	ld r18, X
+
+	cpi r16, 0
+	breq condicion_columna_1
+	cp r16, r17
+	brne condicion_columna_1
+	cp r16, r18
+	brne condicion_columna_1
+
+	rjmp victoria
+
+
+condicion_columna_1:
+	; verificamos la primera columna: 0,3,6
+	ldi XL, low(tablero)
+	ldi XH, high(tablero)
+	ld r16, X
+	adiw X, 3
+	ld r17, X
+	adiw X, 3
+	ld r18, X
+
+	cpi r16, 0
+	breq condicion_columna_2
+	cp r16, r17
+	brne condicion_columna_2
+	cp r16, r18
+	brne condicion_columna_2
+
+	rjmp victoria
+
+condicion_columna_2:
+	; verificamos la segunda columna: 1,4,7
+	ldi XL, low(tablero)
+	ldi XH, high(tablero)
+	adiw X, 1
+	ld r16, X
+	adiw X, 3
+	ld r17, X
+	adiw X, 3
+	ld r18, X
+
+	cpi r16, 0
+	breq condicion_columna_3
+	cp r16, r17
+	brne condicion_columna_3
+	cp r16, r18
+	brne condicion_columna_3
+
+	rjmp victoria
+
+condicion_columna_3:
+	; verificamos la segunda columna: 2,5,8
+	ldi XL, low(tablero)
+	ldi XH, high(tablero)
+	adiw X, 2
+	ld r16, X
+	adiw X, 3
+	ld r17, X
+	adiw X, 3
+	ld r18, X
+
+	cpi r16, 0
+	breq condicion_fila_1
+	cp r16, r17
+	brne condicion_fila_1
+	cp r16, r18
+	brne condicion_fila_1
+
+	rjmp victoria
+
+condicion_fila_1:
+	; verificamos la segunda columna: 0,1,2
+	ldi XL, low(tablero)
+	ldi XH, high(tablero)
+	ld r16, X
+	adiw X, 1
+	ld r17, X
+	adiw X, 1
+	ld r18, X
+
+	cpi r16, 0
+	breq condicion_fila_2
+	cp r16, r17
+	brne condicion_fila_2
+	cp r16, r18
+	brne condicion_fila_2
+
+	rjmp victoria
+
+condicion_fila_2:
+	; verificamos la segunda columna: 3,4,5
+	ldi XL, low(tablero)
+	adiw X, 3
+	ldi XH, high(tablero)
+	ld r16, X
+	adiw X, 1
+	ld r17, X
+	adiw X, 1
+	ld r18, X
+
+	cpi r16, 0
+	breq condicion_fila_3
+	cp r16, r17
+	brne condicion_fila_3
+	cp r16, r18
+	brne condicion_fila_3
+
+	rjmp victoria
+
+condicion_fila_3:
+	; verificamos la segunda columna: 6,7,8
+	ldi XL, low(tablero)
+	adiw X, 6
+	ldi XH, high(tablero)
+	ld r16, X
+	adiw X, 1
+	ld r17, X
+	adiw X, 1
+	ld r18, X
+
+	cpi r16, 0
+	breq condicion_victoria_exit
+	cp r16, r17
+	brne condicion_victoria_exit
+	cp r16, r18
+	brne condicion_victoria_exit
+
+	rjmp victoria
+
+condicion_victoria_exit:
+	pop r18
+	pop r17
+	pop r16
+
+	ret
+
+victoria:
+	ldi r26, 0x42
+	ret
